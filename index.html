@@ -65,15 +65,15 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
   <div class="grp" id="flt"><button data-f="all" class="on">All</button><button data-f="done">Completed</button><button data-f="todo">Incomplete</button></div>
   <div class="sp"></div>
   <div class="grp" id="tabs"><button data-t="tr" class="on">Badge Tracker</button><button data-t="lb">Leaderboard</button></div>
-  <button id="rbx">Connect Roblox</button>
+  <button id="rbx">Check Roblox badges</button>
   <button id="adm">Admin: Off</button>
 </header>
 <main>
   <div class="panel" id="rpanel">
     <span class="lab">Roblox username</span><input id="ru" placeholder="e.g. Builderman">
     <button id="rgo">Check my badges</button>
-    <span class="lab">API host</span><input id="rh" value="https://{sub}.roblox.com" size="28">
-    <div class="msg" id="rmsg">Looks up your account, checks every list badge that has a Roblox ID, and records the date you earned it (earliest date = first clear).</div>
+    <span class="lab">API host</span><input id="rh" value="https://{sub}.roproxy.com" size="28">
+    <div class="msg" id="rmsg">Type a Roblox username and press Check (Admin on = results are saved for everyone). Checks every list badge that has a Roblox ID, and records the date you earned it (earliest date = first clear).</div>
   </div>
   <div class="panel" id="apanel">
     <div class="lab" style="width:100%">Attach Roblox badge IDs, one per line: badgeId | badge name | game (game is optional, use it for duplicate badge names)</div>
@@ -91,8 +91,11 @@ window.FB_CFG={
   storageBucket: "uhbl-tracker.firebasestorage.app",
   messagingSenderId: "879331496695",
   appId: "1:879331496695:web:4f3f75d3833de9828bb9f2"
-}; // paste your Firebase web config object here
-window.ADMIN_UID="2eExpPGtU5Qb52j8MvV26Cmmr0r1"; // paste your admin Google account UID here
+};
+window.ADMIN_UID="2eExpPGtU5Qb52j8MvV26Cmmr0r1";
+window.RBX_CLIENT_ID=""; // Roblox OAuth app client ID (Creator Hub > Credentials)
+window.RBX_REDIRECT=""; // optional: must match the redirect URL you registered; default = this page's URL
+window.RBX_TOKEN_URL=""; // optional: your own server's token URL; empty = try Roblox directly
 const RAW=`Super Bomb Survival | 6.0 Hero
 Project Lazarus: 💀 ZOMBIES 💀 | Round 50
 Five Nights at Roblox 2 | Night 7 (7/20)
@@ -357,7 +360,7 @@ document.addEventListener("keydown",e=>{if(e.key=="Enter"&&e.target.dataset.in!=
 $("#q").oninput=e=>{S.q=e.target.value;render()};
 $("#adm").onclick=async e=>{const btn=e.currentTarget,want=!S.admin;
   if(window.LIVE){if(want){if(!(await window.fbLogin())){if(window.ADMIN_UID)$("#rmsg").textContent="That Google account isn't the admin.";$("#rpanel").classList.add("show");return}}else window.fbLogout()}
-  S.admin=want;btn.textContent="Admin: "+(S.admin?"On":"Off");btn.classList.toggle("on",S.admin);$("#apanel").classList.toggle("show",S.admin);render()};
+  S.admin=want;btn.textContent="Admin: "+(S.admin?"On":"Off");btn.classList.toggle("on",S.admin);$("#apanel").classList.toggle("show",S.admin);$("#rpanel").classList.toggle("show",S.admin);render()};
 $("#rbx").onclick=()=>$("#rpanel").classList.toggle("show");
 $("#impgo").onclick=()=>{const nz=s=>s.toLowerCase().replace(/\s+/g," ").trim();let n=0;
   $("#imp").value.split("\n").map(l=>l.split("|").map(s=>s.trim())).forEach(r=>{if(r.length<2||!/^\d+$/.test(r[0]))return;
@@ -366,20 +369,41 @@ $("#impgo").onclick=()=>{const nz=s=>s.toLowerCase().replace(/\s+/g," ").trim();
 $("#reset").onclick=()=>{S.badges.forEach(b=>b.victors=[]);save();render()};
 // ---- Roblox sync ----
 const host=s=>$("#rh").value.replace("{sub}",s).replace(/\/$/,"");
-$("#rgo").onclick=async()=>{const m=$("#rmsg"),name=$("#ru").value.trim();if(!name)return;
+async function checkBadges(u){const m=$("#rmsg");$("#rpanel").classList.add("show");
   const ids=S.badges.filter(b=>b.id).map(b=>b.id);
-  if(!ids.length){m.textContent="No badges have a Roblox badge ID yet. Use Admin → Attach IDs to add them.";return}
-  m.textContent="Looking up user…";
-  try{
-    const r=await fetch(host("users")+"/v1/usernames/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usernames:[name],excludeBannedUsers:false})});
-    const u=(await r.json()).data?.[0];if(!u){m.textContent="User not found.";return}
-    let got=0;
+  if(!ids.length){m.textContent="Verified as "+u.name+", but no badges have a Roblox badge ID yet (Admin > Attach IDs).";return}
+  m.textContent="Checking badges for "+u.name+"…";
+  try{let got=0;
     for(let i=0;i<ids.length;i+=100){
       const rr=await fetch(`${host("badges")}/v1/users/${u.id}/badges/awarded-dates?badgeIds=${ids.slice(i,i+100).join(",")}`);
       const data=(await rr.json()).data||[];
-      data.forEach(x=>{const idx=S.badges.findIndex(b=>String(b.id)==String(x.badgeId));if(idx>=0){addVictor(idx,u.name,String(x.awardedDate).slice(0,10));got++}})}
-    save();render();m.textContent=`Done: ${u.name} has ${got} of ${ids.length} listed badges.`+(window.LIVE&&!S.admin?" (View only: saving for everyone needs the server step.)":"");
-  }catch(err){m.textContent="Roblox request failed (browsers block direct Roblox API calls; set the API host to a CORS-enabled proxy and run this page from your own site). "+err.message}};
+      data.forEach(x=>{const idx=S.badges.findIndex(b=>String(b.id)==String(x.badgeId));if(idx>=0){if(!window.LIVE||S.admin)addVictor(idx,u.name,String(x.awardedDate).slice(0,10));got++}})}
+    save();render();m.textContent=`${u.name} has ${got} of ${ids.length} listed badges.`+(window.LIVE&&!S.admin?" (Check only: Admin must be on to record results for everyone.)":"");
+  }catch(err){m.textContent="Badge check failed (the roproxy.com relay may be down or rate-limited). "+err.message}}
+$("#rgo").onclick=async()=>{const m=$("#rmsg"),name=$("#ru").value.trim();if(!name)return;m.textContent="Looking up user…";
+  try{const r=await fetch(host("users")+"/v1/usernames/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usernames:[name],excludeBannedUsers:false})});
+    const u=(await r.json()).data?.[0];if(!u){m.textContent="User not found.";return}await checkBadges(u)}
+  catch(err){m.textContent="Roblox request failed: "+err.message}};
+// ---- Roblox login (OAuth 2.0 + PKCE) ----
+const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const rnd=n=>b64(crypto.getRandomValues(new Uint8Array(n)));
+const redir=()=>window.RBX_REDIRECT||location.origin+location.pathname;
+async function rbxLogin(){const m=$("#rmsg");
+  if(!window.RBX_CLIENT_ID){$("#rpanel").classList.add("show");m.textContent="Roblox login isn't set up yet: put your OAuth app's client ID in RBX_CLIENT_ID at the top of the script.";return}
+  const v=rnd(48),st=rnd(16),ch=b64(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));
+  sessionStorage.setItem("rbx",JSON.stringify({v,st}));
+  location.href="https://apis.roblox.com/oauth/v1/authorize?"+new URLSearchParams({client_id:window.RBX_CLIENT_ID,redirect_uri:redir(),scope:"openid profile",response_type:"code",code_challenge:ch,code_challenge_method:"S256",state:st})}
+async function rbxReturn(){const q=new URLSearchParams(location.search),code=q.get("code");if(!code)return;
+  const m=$("#rmsg");$("#rpanel").classList.add("show");
+  let s={};try{s=JSON.parse(sessionStorage.getItem("rbx")||"{}")}catch(e){}
+  history.replaceState(null,"",redir());
+  if(q.get("state")!==s.st){m.textContent="Login failed: state mismatch. Try again.";return}
+  m.textContent="Verifying with Roblox…";
+  try{const r=await fetch(window.RBX_TOKEN_URL||"https://apis.roblox.com/oauth/v1/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",code,client_id:window.RBX_CLIENT_ID,redirect_uri:redir(),code_verifier:s.v})});
+    const t=await r.json();if(!t.id_token)throw new Error(t.error_description||t.error||"no id_token returned");
+    const p=JSON.parse(atob(t.id_token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    await checkBadges({id:p.sub,name:p.preferred_username||p.nickname||p.name||p.sub})}
+  catch(err){m.textContent="Roblox login failed: "+err.message+" (If this says failed to fetch or invalid client, Roblox needs the token step done by a small server: set RBX_TOKEN_URL to it.)"}}
 // ---- background ----
 const cv=$("#bg"),cx=cv.getContext("2d");let W,H,P=[];
 function size(){W=cv.width=innerWidth;H=cv.height=innerHeight;P=Array.from({length:Math.min(70,W/18|0)},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,vx:(Math.random()-.5)*.25,vy:-Math.random()*.35-.05}))}
@@ -389,7 +413,7 @@ function frame(){t+=.4;cx.clearRect(0,0,W,H);cx.strokeStyle="rgba(57,255,20,.13)
   const gr=cx.createLinearGradient(0,(t*2)%(H*2)-H,W,(t*2)%(H*2));gr.addColorStop(0,"rgba(0,229,255,0)");gr.addColorStop(.5,"rgba(0,229,255,.035)");gr.addColorStop(1,"rgba(0,229,255,0)");cx.fillStyle=gr;cx.fillRect(0,0,W,H);
   cx.fillStyle="rgba(255,255,255,.4)";P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.y<-5){p.y=H+5;p.x=Math.random()*W}cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.3);cx.fill()});
   requestAnimationFrame(frame)}
-frame();render();
+frame();render();rbxReturn();
 </script>
 <script type="module">
 const C=window.FB_CFG;
