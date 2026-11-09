@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UHBL Tracker</title>
+<style>
+:root{--bg:#000;--card:#0a0a0a;--line:#2a2a2a;--tx:#fff;--mut:#8a8a8a;--ok:#39ff14;--gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32;--acc:#00e5ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;color:var(--tx);font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+header,main{position:relative;z-index:1}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:rgba(0,0,0,.88);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;z-index:5}
+.logo{font-weight:900;letter-spacing:.12em;font-size:18px}
+.count{font-weight:800;color:var(--ok);text-shadow:0 0 10px rgba(57,255,20,.5);border:1px solid var(--ok);padding:6px 12px}
+input,button,select{font:inherit;color:var(--tx);background:#000;border:1px solid var(--line);padding:8px 12px;border-radius:0}
+input:focus{outline:1px solid var(--acc)}
+button{cursor:pointer;text-transform:uppercase;font-size:12px;letter-spacing:.08em;font-weight:700}
+button:hover{border-color:#fff}
+button.on{background:#fff;color:#000;border-color:#fff}
+.grp{display:flex}.grp button+button{border-left:0}
+.sp{flex:1}
+main{max-width:1400px;margin:0 auto;padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px;transition:.3s}
+.card.off{filter:grayscale(1);opacity:.45}
+.card.on{border-color:var(--ok);box-shadow:0 0 18px rgba(57,255,20,.35),inset 0 0 22px rgba(57,255,20,.07)}
+.top{display:flex;gap:14px;align-items:center}
+.top svg{width:64px;height:64px;flex:none}
+.nm{font-weight:800;font-size:17px;line-height:1.15}
+.gm{color:var(--mut);font-size:13px;margin-top:3px}
+.tag{align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.14em;padding:4px 9px;border:1px solid var(--line);color:var(--mut)}
+.on .tag{color:#000;background:var(--ok);border-color:var(--ok);box-shadow:0 0 12px var(--ok)}
+.vic{display:flex;flex-wrap:wrap;gap:6px;min-height:26px}
+.chip{font-size:12px;border:1px solid #444;padding:3px 8px;display:flex;gap:6px;align-items:center}
+.on .chip{border-color:var(--ok)}
+.chip i{color:var(--mut);font-style:normal;font-size:11px}
+.chip b{cursor:pointer;color:#f55}
+.fc{color:var(--gold)}
+.add{display:flex;gap:6px}.add input{flex:1;min-width:0}
+.lab{font-size:11px;color:var(--mut);letter-spacing:.12em;text-transform:uppercase}
+.panel{border:1px solid var(--line);background:rgba(10,10,10,.92);padding:16px;margin-bottom:16px;display:none;gap:10px;flex-wrap:wrap;align-items:center}
+.panel.show{display:flex}
+.panel input{min-width:200px}
+.msg{width:100%;font-size:13px;color:var(--acc);white-space:pre-wrap}
+.lb{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.lb h2{margin:0 0 12px;letter-spacing:.1em;font-size:16px;text-transform:uppercase}
+.row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);background:var(--card);margin-bottom:8px}
+.rk{font-weight:900;font-size:22px;width:34px;color:var(--mut)}
+.row .n{flex:1;font-weight:700}.row .s{font-size:22px;font-weight:900}
+.r1{border-color:var(--gold);box-shadow:0 0 20px rgba(255,215,0,.35)}.r1 .rk,.r1 .s{color:var(--gold)}
+.r2{border-color:var(--silver);box-shadow:0 0 18px rgba(192,192,192,.3)}.r2 .rk,.r2 .s{color:var(--silver)}
+.r3{border-color:var(--bronze);box-shadow:0 0 18px rgba(205,127,50,.3)}.r3 .rk,.r3 .s{color:var(--bronze)}
+.empty{color:var(--mut);padding:30px;text-align:center;border:1px dashed var(--line)}
+textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid var(--line);font:12px monospace;padding:8px}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<header>
+  <div class="logo">UHBL</div>
+  <div class="count" id="count"></div>
+  <input id="q" placeholder="Search badge, game or player…" size="26">
+  <div class="grp" id="flt"><button data-f="all" class="on">All</button><button data-f="done">Completed</button><button data-f="todo">Incomplete</button></div>
+  <div class="sp"></div>
+  <div class="grp" id="tabs"><button data-t="tr" class="on">Badge Tracker</button><button data-t="lb">Leaderboard</button></div>
+  <button id="rbx">Connect Roblox</button>
+  <button id="adm">Admin: Off</button>
+</header>
+<main>
+  <div class="panel" id="rpanel">
+    <span class="lab">Roblox username</span><input id="ru" placeholder="e.g. Builderman">
+    <button id="rgo">Check my badges</button>
+    <span class="lab">API host</span><input id="rh" value="https://{sub}.roblox.com" size="28">
+    <div class="msg" id="rmsg">Looks up your account, checks every list badge that has a Roblox ID, and records the date you earned it (earliest date = first clear).</div>
+  </div>
+  <div class="panel" id="apanel">
+    <div class="lab" style="width:100%">Attach Roblox badge IDs, one per line: badgeId | badge name | game (game is optional, use it for duplicate badge names)</div>
+    <textarea id="imp" placeholder="2124456789 | Round 50 | Project Lazarus: 💀 ZOMBIES 💀"></textarea>
+    <button id="impgo">Attach IDs</button><button id="reset">Reset all victors</button>
+  </div>
+  <div id="view"></div>
+</main>
+<script>
+// ---- LIVE MODE SETTINGS (leave null to run locally) ----
+window.FB_CFG={
+  apiKey: "AIzaSyBayea-xQ1wKLzUuHmCKltr5k0K8W8lEjY",
+  authDomain: "uhbl-tracker.firebaseapp.com",
+  projectId: "uhbl-tracker",
+  storageBucket: "uhbl-tracker.firebasestorage.app",
+  messagingSenderId: "879331496695",
+  appId: "1:879331496695:web:4f3f75d3833de9828bb9f2"
+}; // paste your Firebase web config object here
+window.ADMIN_UID=""; // paste your admin Google account UID here
+const RAW=`Super Bomb Survival | 6.0 Hero
+Project Lazarus: 💀 ZOMBIES 💀 | Round 50
+Five Nights at Roblox 2 | Night 7 (7/20)
+Dancing Line: The Rebirth | Wrath of the Squid: Perfection
+CRAZY HORSE GAME 🐴 | TRUE 100%
+Isle of the Ether | ether's edge
+A-P: The Perfect Run | A-P: Perfect Run Completed
+Nocturner | Ira de Dis
+Night Before the Blizzard | Extreme Difficulty
+Simple Hiking: Hiking of The Soul | Formidable Mental Fortitude
+A ROBLOX Quest: Elements of Robloxia | Tower Hero
+The Battle Bricks | CHAPTER V - TREE(3)
+tower of ten floors challenge | You S+ Ranked in TRUE MODE!
+Urbis | Jack of All Trades
+Cyber Arena | TRUE LETHALITY
+Notoriety | True Criminal
+Dogwatching 3 | ★ALL-STARS★
+a dream youve had before | judgement
+Super Golf! | Teamwork!
+WEGA's Challenge: THE ETERNAL LAPPIN' | Death is imminent
+Isolarium | Dreamer
+The True RailGun Obby | Finish the HARDCORE Railgun Obby
+Boss6:06 | KEEP SMILING
+Isle | The Replay
+Gallery of Ordered Instances | The Lark o'er Ocean's Door
+Find the Corns | Cornpletionist
+Pressure | This Badge Really Sucks
+Derelict | Melisande, The Oracle
+> home | One for you, One for me, One for the team.
+Find The Binguses | ???
+Decloid Chaos: Overcharged | Strong Bridge
+Speed Run Adventure 2 | Completionist - Speed Run Adventure 2
+ZIPLINE OBBY 2024 | DEATHLESS WIN
+UNC | Escaped (Impossible)
+Elite Buttering | elitemost buttering
+[🗣️] GUESSER OBBY 💯 | Bad research
+Tropical Golf | Process of Rebirth
+Catalog Gear Place | Cosmoknight's Fish
+Keep the Platform from Falling 2 | Travelled From Dawn to Dusk
+Pie Hiker's Reverie | Pie Liker
+Arcane Odyssey | Slayer of Ancient Dragons
+PM606 Exit Pizza | THANKS FOR PLAYING
+six hours of silence | survive
+razor passage | Razor Passage
+Existential Dreams | Night 7
+MGDWare | You did this to Yourself
+Cliffside Station | CEO of Cliffside
+STAR GLITCHER ~ REVITALIZED | Ultrahell but No Death
+UMG:Phobia | How?
+Depth Spelunking | Madman
+SpeedBLOX | First-Person Completionist
+cybertzas bonanza V2 | gasolina
+Every Jump... | for good
+I Hate You. | Casual Muncher
+Virus Alert | “MYDOOM” Complete
+Climbing Game | Angelic Assessment [Brutal] [Featured Map]
+Roblox Karts | Veteran Speedster
+Find The Alalals | Scavenger Hunt
+FnF Multiverse | Dirty Tricks
+Worlds Hardest Game | deathless win
+CMYKrash [Modifiers] | HEXTreme Completion!
+Run | The Perfect Run
+Area 66 | Back Again
+Dimension Lock | Dimension King
+The Reactor [Maintenance] | Hell Shift
+No Mercy: The Gameshow | I feel fear no longer
+The Crusher (Survival Obby) | Aced it All
+Pressure Practice Place | Death Welcomes You Home
+neon❖Knights | Without a Voice
+Sound Space | BRRR Champion
+1 Minute Until Global Catastrophe | Misery
+Friday Night Partying | [PFC] BOOYAH!!!
+whizzbang | 2000 yard stare
+sun, moon, and star. to these i bid adieu | Knockin' on Heaven's Gate
+Project Somnia | dreams of dystopia
+Minus Elevation | Floor 100
+OPERATION COYOTE | 100
+Paradigm-Shift Tower Defense | Commander One
+gameboysix's Nonogram | Tides of War
+Escape Room | Winner Winner Chicken Dinner
+Beat Block Boulevard | Beat Block Boulevard
+This Game is Pain | No. Just... No.
+Flood Escape 2 🌊 | Luminance [Crazy+]
+World's Hardest Obby | World's HARDEST obby
+Challenger's Street | Challenger's Street
+obby with a thingamasilly at the end!! | BYFATETOFATE
+SCP: The Red Lake | Hell Showdown
+OVER-DRILLED | The City
+The Crew's Night | TORMENTED
+A Way Everything Goes | LOCKED IN!
+Survive The Disasters 2 | 100 Streak (Hardcore)
+Obby Royale | Death Defier
+Defend The Core II | Fearsome Five - Perfectionist Mode Complete!
+Portu After Dark | Sleepover
+A-888: Project: Creedbreaker | 0 Seconds to Midnight
+Arena: Tower Defense! | Perfect Hybrid Scout
+Residence Massacre | Completionist
+Boss Fighting Stages | Draco Arcade LVL3:[Complete]
+speed demon boss fight (real) | 0-S Sanguine Spectre
+Azure Mines | Completionist
+1010! | Score 250,000
+PIBBS' BADGER | TRUE COMPLETIONIST (96 BADGES)
+Outrun the Nightmare | Outran the Psychosis
+Sisyphus Simulator | All Trials
+Find the Doge Heads 2 | Overachiever Doge
+Tower Defense Simulator | Triumph Voidcore
+The RakOOF | What are you trying to prove?
+BCWR: Reign of Lord Astaroth | Soul of Oblivion
+Every (Minigames) End | The One Above Kaizo!
+Deity Arena | L.
+IN 1 MINUTE YOU WILL EXPLODE | How did we get here?
+Survival The SML the Killers | AW SHUCKS
+Taxi Simulator 2 | Guest Land
+Strange Place | Final boss
+Dummies vs Noobs | GO OUTSIDE
+Undertale: Judgement Day | ...
+Celestial Caverns | Warehouse
+Dandy's World | Twisteds Fear Me.
+Pool | A Goliath
+KittyLand (Horror) | True Squad Nightmare
+Resurrections | Bind All the Flowers
+Confinement | Stocked Up
+Crystalis Boss Fights | Lightwing, Begone!
+🚩Super Check Point! | Classic Champion
+Allusions | [HOLLOW IMITATION]
+Shifts at Big Q's | 6/20
+PSYCHOCATS 2 | True Perfectionist
+Pandi's Aim Trainer | 25,000 in Score!
+Tower Battles: Battlefront | Lone Void Specialist
+Fumo Horrors | Survive a XK OUTBREAK Round
+Loop | Day 100
+🌱 Grass Cutting Incremental 🌱 | Omega Loop [Bonus]
+Entry Point | Phoenix Rising
+Project: RUSHER | 3000 Rating
+obby definitive edition | MEET THE O̶W̶N̶E̶R̶ BLOODLESS ONE
+Blackout: Revival | DEATH'S VERDICT
+The Difficulty Upgrade Tree: Regrown | Limits of All Chaos (Lap Cluster B)
+flop world | Floor 250
+Something Boss Fights | CHALLENGE: Calamity Voril
+Balance | Balance Pro
+Reminiscence Zombies | Zombie Scout
+Caustic Confines | Avenge the Fallen
+Ultimate Retro Night: Singleplayer | He Burns
+Be Saga | Be True Completionist
+Industrialist | Still possible!
+Random 6:06 Sublevels | COMPLETIONIST
+THE CRIMSON PERPLEXION | TENEBROUS HELLFIRE
+Tower of Hell | Certified Beast
+TRIA.os - Escape | Master of Difficulties
+Just Shapes and Beats | 1000%
+Zenith Tower | THANKS FOR PLAYING
+Skill Based Boss Fights | A Forgotten Catastrophe
+Five Nights at The Gang's | 100% Game (Currently Bugged)
+Supreme Kaizo Robot 64 2*3: 2: Fixed Version | 45 Cold Thing !!!!!!!!!!!!!!!!!!!!!!!
+Super Deadly Levels List | Cruel Punishment
+Basically FNF: Remix | Camellia Dan
+Friendly Smile 6:06 | Hallucination
+🎮 Cornerstone Arcade Reborn | Hardcore Completionist
+SUNDOWNER | PERDITION: CESSATION
+Five Nights at Mexik's 1 :REMASTERED | What?
+Defend the Statue: Eras of Conflict | Loremaster
+Frozen Over Games Hub | The Ultimate Badge
+Party Chaos | Monochromatic Hell
+Realm Archive | Every Last Secret
+Find The Amoguses | Novisor Amogus 2
+Tower Invaders: Organized Chaos | The End
+Find the BFB Characters | Main Realm Medallion
+Isaac's Minesweeper | Get 90% Completion
+Defend The Core - Remastered | The Promise
+A Jumpless Demise | Above The Darkness
+Deadfront [BETA] | NIGHT 100
+No Exit [10 Player Obby] | Hell Is Other People
+Kaizo Adventure Forward: Star Savior | All stars
+Football Fusion 3 | Legendary
+I Wanna Test The Game | Eye Defeated The Greatest
+Radiance Recreation (EXTREME MODE) | Goku's Wrath No Hit
+FNAAWC 3 | Pardoned
+Taxi Simulator (Brick Cars Edition) | Over Achiever of Lanes!
+King of Wallhops | Bluebob's Trials
+The Gang's Warehouse | INVICTUS
+I want to be free | tower1 Golden
+The Train Tunnels 🚂 | Last Stop
+Aphasic Song | Segel 4 Empat
+The Destroyed Future | Approaching Storm - 300%
+Modespice Extra++ | FLAWLESS TRUE SQUID
+Defend the Statue | TALE OF TESTAMENT
+Bee Swarm Simulator | Mountain Top Grandmaster
+smile | Winner! (Kaizo Mode)
+The Final Stand 2 | Night 30 - Impossible
+The Zombie's Revenge | Azura Award
+Enigmatic Void | ???
+Flood Escape Ultimate ⚡ | Ascension to Heaven
+One Thousand Rooms | Taking an Immeasurable Risk
+Enfosi | MANIAC COMPLETION
+Randomly Generated Droids | FOOLISH!!!!
+Japanese Meme Elevator | Legend PERFECT RUN
+Zipline Obby 2025 | Deathless Completion
+The Omniverse | Psychotic Sociopath (Video Proof)
+Liquid Breakout | Checklist - All Maps
+Sword Fighting Chaos | Elite rank
+Malachite Miners 2 | Voluntary Torment
+TS!CouchSwap Headed Reded (Unofficial) | Desecration
+Caleb's Soul Crushing Domain | Chaotic Tower - All Jumps
+Kaizo Robot 64 - Alter | Still Having Fun?
+Find the Cubes! | Legend of The Multicube
+DLB: Custom Night | One Of Us.
+Eternal Towers of Hell | Beat The Tower of Cruel Punishment
+CG Custom Maps Toplist [CGCR] | The Apostle of the Void
+Ascension to Taser | who do you think you are?
+rosu!mania Music + Rhythm | Midnight Illusion III
+The Great Centurial: Revived | Completed 61-70
+(CI PHASE 2) THE GAUNTLET | PARASITIC DEMISE
+Devoid | Devoid - Completed Hardcore Mode
+Minesweeper Duels | S+ Rank
+True lap 3 hardmode. | SUBLEVEL 120
+The Ultimate Destroyer of Limits | Limitless
+[Race to the End of Time] | Some things weren't made to be beaten
+Kaizo Robot 64 | Out of the Park
+Nullscape | 100% EXTREME
+NOLTN's Hellbeats Archive | finally free, feeling freedom
+Beat Bounce | The Milky Wave
+John Man ALL JALAPENOS | I'm here.
+⚜️ The House ⚜️ | Misery Mettle
+Stairway to Heaven | Ascended
+The Eternal Abyss | Tower of The Quest For Perfection`;
+const SAMPLE=RAW.split("\n").map(l=>{const i=l.indexOf(" | ");return{id:null,game:l.slice(0,i).trim(),name:l.slice(i+3).trim(),victors:[]}});
+let S={badges:SAMPLE,admin:false,f:"all",q:"",tab:"tr"};
+const bk=b=>b.game+"|"+b.name;
+try{const r=JSON.parse(localStorage.getItem("uhbl2")||"{}");S.badges.forEach(b=>{const x=r[bk(b)];if(x){b.victors=x.v||[];b.id=x.id||null}})}catch(e){}
+const hk=b=>{let h=5381;const s=bk(b);for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return"k"+h};
+const save=()=>{try{const o={};S.badges.forEach(b=>{if(b.victors.length||b.id)o[bk(b)]={v:b.victors,id:b.id}});localStorage.setItem("uhbl2",JSON.stringify(o))}catch(e){}
+  if(window.LIVE&&window.fbSave){const r={};S.badges.forEach(b=>{if(b.victors.length||b.id)r[hk(b)]={v:b.victors,id:b.id}});window.fbSave(r)}};
+window.applyRemote=d=>{S.badges.forEach(b=>{const x=d[hk(b)];b.victors=x?x.v||[]:[];b.id=x?x.id||null:null});render()};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const key=n=>n.trim().toLowerCase();
+function first(b){if(!b.victors.length)return null;const d=b.victors.filter(v=>v.d).sort((a,c)=>a.d<c.d?-1:1);return d.length?d[0]:b.victors[0]}
+function icon(b){let h=0;for(const c of b.name)h=(h*31+c.charCodeAt(0))%360;const ini=b.name.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
+return `<svg viewBox="0 0 64 64"><polygon points="32,2 60,18 60,46 32,62 4,46 4,18" fill="hsl(${h},80%,18%)" stroke="hsl(${h},90%,60%)" stroke-width="2.5"/><text x="32" y="40" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="sans-serif">${esc(ini)}</text></svg>`}
+function addVictor(i,name,d){name=name.trim();if(!name)return;const b=S.badges[i];const v=b.victors.find(x=>key(x.n)==key(name));if(v){if(d&&(!v.d||d<v.d))v.d=d}else b.victors.push({n:name,d:d||null});save()}
+function stats(){const tot={},fc={};S.badges.forEach(b=>{b.victors.forEach(v=>tot[v.n]=(tot[v.n]||0)+1);const f=first(b);if(f)fc[f.n]=(fc[f.n]||0)+1});
+const srt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return{tot:srt(tot),fc:srt(fc)}}
+function rank(list){return list.length?list.map((e,i)=>`<div class="row ${i<3?"r"+(i+1):""}"><div class="rk">${i+1}</div><div class="n">${esc(e[0])}</div><div class="s">${e[1]}</div></div>`).join(""):`<div class="empty">No data yet</div>`}
+function render(){
+  const done=S.badges.filter(b=>b.victors.length).length;
+  $("#count").textContent=`Completed: ${done} / ${S.badges.length} Badges`;
+  const v=$("#view");
+  if(S.tab=="lb"){const s=stats();v.innerHTML=`<div class="lb"><div><h2>Most Total Badges</h2>${rank(s.tot)}</div><div><h2>Most First Clears</h2>${rank(s.fc)}</div></div>`;return}
+  const q=S.q.toLowerCase();
+  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==!!b.victors.length)&&(!q||(b.name+" "+b.game+" "+b.victors.map(x=>x.n).join(" ")).toLowerCase().includes(q)));
+  v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=b.victors.length,f=first(b);
+  return `<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}</div></div></div>
+  <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Victors</div>
+  <div class="vic">${on?b.victors.map((x,j)=>`<span class="chip ${f===x?"fc":""}">${f===x?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin?`<b data-rm="${i}:${j}">×</b>`:""}</span>`).join(""):`<span class="gm">Nobody yet</span>`}</div>
+  ${S.admin?`<div class="add"><input placeholder="Type a name + Enter" data-in="${i}"><button data-add="${i}">Add</button></div>`:""}</div>`}).join("")}</div>`:`<div class="empty">No badges match.</div>`}
+document.addEventListener("click",e=>{const t=e.target;
+  if(t.dataset.add!=null){const inp=document.querySelector(`[data-in="${t.dataset.add}"]`);addVictor(+t.dataset.add,inp.value);render()}
+  if(t.dataset.rm){const[i,j]=t.dataset.rm.split(":");S.badges[i].victors.splice(+j,1);save();render()}
+  if(t.dataset.f){S.f=t.dataset.f;document.querySelectorAll("#flt button").forEach(b=>b.classList.toggle("on",b===t));render()}
+  if(t.dataset.t){S.tab=t.dataset.t;document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b===t));render()}});
+document.addEventListener("keydown",e=>{if(e.key=="Enter"&&e.target.dataset.in!=null){addVictor(+e.target.dataset.in,e.target.value);render()}});
+$("#q").oninput=e=>{S.q=e.target.value;render()};
+$("#adm").onclick=async e=>{const btn=e.currentTarget,want=!S.admin;
+  if(window.LIVE){if(want){if(!(await window.fbLogin())){if(window.ADMIN_UID)$("#rmsg").textContent="That Google account isn't the admin.";$("#rpanel").classList.add("show");return}}else window.fbLogout()}
+  S.admin=want;btn.textContent="Admin: "+(S.admin?"On":"Off");btn.classList.toggle("on",S.admin);$("#apanel").classList.toggle("show",S.admin);render()};
+$("#rbx").onclick=()=>$("#rpanel").classList.toggle("show");
+$("#impgo").onclick=()=>{const nz=s=>s.toLowerCase().replace(/\s+/g," ").trim();let n=0;
+  $("#imp").value.split("\n").map(l=>l.split("|").map(s=>s.trim())).forEach(r=>{if(r.length<2||!/^\d+$/.test(r[0]))return;
+    const m=S.badges.find(b=>nz(b.name)==nz(r[1])&&(!r[2]||nz(b.game)==nz(r[2])));if(m){m.id=r[0];n++}});
+  save();render();$("#rmsg").textContent=n+" badge IDs attached.";$("#rpanel").classList.add("show")};
+$("#reset").onclick=()=>{S.badges.forEach(b=>b.victors=[]);save();render()};
+// ---- Roblox sync ----
+const host=s=>$("#rh").value.replace("{sub}",s).replace(/\/$/,"");
+$("#rgo").onclick=async()=>{const m=$("#rmsg"),name=$("#ru").value.trim();if(!name)return;
+  const ids=S.badges.filter(b=>b.id).map(b=>b.id);
+  if(!ids.length){m.textContent="No badges have a Roblox badge ID yet. Use Admin → Attach IDs to add them.";return}
+  m.textContent="Looking up user…";
+  try{
+    const r=await fetch(host("users")+"/v1/usernames/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usernames:[name],excludeBannedUsers:false})});
+    const u=(await r.json()).data?.[0];if(!u){m.textContent="User not found.";return}
+    let got=0;
+    for(let i=0;i<ids.length;i+=100){
+      const rr=await fetch(`${host("badges")}/v1/users/${u.id}/badges/awarded-dates?badgeIds=${ids.slice(i,i+100).join(",")}`);
+      const data=(await rr.json()).data||[];
+      data.forEach(x=>{const idx=S.badges.findIndex(b=>String(b.id)==String(x.badgeId));if(idx>=0){addVictor(idx,u.name,String(x.awardedDate).slice(0,10));got++}})}
+    save();render();m.textContent=`Done: ${u.name} has ${got} of ${ids.length} listed badges.`+(window.LIVE&&!S.admin?" (View only: saving for everyone needs the server step.)":"");
+  }catch(err){m.textContent="Roblox request failed (browsers block direct Roblox API calls; set the API host to a CORS-enabled proxy and run this page from your own site). "+err.message}};
+// ---- background ----
+const cv=$("#bg"),cx=cv.getContext("2d");let W,H,P=[];
+function size(){W=cv.width=innerWidth;H=cv.height=innerHeight;P=Array.from({length:Math.min(70,W/18|0)},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,vx:(Math.random()-.5)*.25,vy:-Math.random()*.35-.05}))}
+addEventListener("resize",size);size();let t=0;
+function frame(){t+=.4;cx.clearRect(0,0,W,H);cx.strokeStyle="rgba(57,255,20,.13)";cx.lineWidth=1;const g=48,o=t%g;
+  cx.beginPath();for(let x=-g+o;x<W;x+=g){cx.moveTo(x,0);cx.lineTo(x,H)}for(let y=-g+o;y<H;y+=g){cx.moveTo(0,y);cx.lineTo(W,y)}cx.stroke();
+  const gr=cx.createLinearGradient(0,(t*2)%(H*2)-H,W,(t*2)%(H*2));gr.addColorStop(0,"rgba(0,229,255,0)");gr.addColorStop(.5,"rgba(0,229,255,.035)");gr.addColorStop(1,"rgba(0,229,255,0)");cx.fillStyle=gr;cx.fillRect(0,0,W,H);
+  cx.fillStyle="rgba(255,255,255,.4)";P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.y<-5){p.y=H+5;p.x=Math.random()*W}cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.3);cx.fill()});
+  requestAnimationFrame(frame)}
+frame();render();
+</script>
+<script type="module">
+const C=window.FB_CFG;
+if(C){
+  const B="https://www.gstatic.com/firebasejs/10.12.2/";
+  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc},{getAuth,GoogleAuthProvider,signInWithPopup,signOut}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
+  const app=initializeApp(C),db=getFirestore(app),au=getAuth(app),ref=doc(db,"uhbl","state");
+  window.LIVE=true;
+  window.fbSave=r=>{if(window.ADMIN_UID&&au.currentUser&&au.currentUser.uid===window.ADMIN_UID)setDoc(ref,{badges:r,updated:Date.now()}).catch(e=>alert("Save failed: "+e.message))};
+  window.fbLogin=async()=>{try{const r=await signInWithPopup(au,new GoogleAuthProvider());if(!window.ADMIN_UID){document.querySelector("#rmsg").textContent="Setup: your admin UID is "+r.user.uid+" . Put it in ADMIN_UID and in the Firestore rules.";return false}return r.user.uid===window.ADMIN_UID}catch(e){return false}};
+  window.fbLogout=()=>signOut(au);
+  onSnapshot(ref,s=>window.applyRemote(s.exists()?s.data().badges||{}:{}));
+}
+</script>
+</body>
+</html>
