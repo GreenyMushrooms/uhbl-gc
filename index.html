@@ -1,4 +1,4 @@
-97;6u<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -8,6 +8,8 @@
 :root{--bg:#000;--card:#0a0a0a;--line:#2a2a2a;--tx:#fff;--mut:#8a8a8a;--ok:#39ff14;--gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32;--acc:#00e5ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
 html,body{margin:0;background:#000;color:var(--tx);font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{font-size:0}
+header,main{font-size:16px}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 header,main{position:relative;z-index:1}
@@ -79,6 +81,7 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
 </style>
 </head>
 <body>
+
 <canvas id="bg"></canvas>
 <header>
   <div class="logo">UHBL</div>
@@ -100,6 +103,7 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
     <div class="msg" id="amsg" aria-live="polite"></div>
   </div>
   <div id="view"></div>
+  <datalist id="victorNames"></datalist>
 </main>
 <script>
 // ---- LIVE MODE SETTINGS ----
@@ -362,15 +366,40 @@ async function loadIcons(){if(iconBusy){iconQueued=true;return}const ids=S.badge
   iconBusy=false;if(add)render();if(iconQueued){iconQueued=false;loadIcons()}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const key=n=>n.trim().toLowerCase();
+const key=n=>String(n??"").normalize("NFKC").replace(/\s+/g," ").trim().toLocaleLowerCase();
 function first(b){if(!b.victors.length)return null;const d=b.victors.filter(v=>v.d).sort((a,c)=>a.d<c.d?-1:1);return d.length?d[0]:b.victors[0]}
 function icon(b){if(b.id&&IMG[b.id])return `<img src="${esc(IMG[b.id])}" alt="Roblox badge icon" loading="lazy">`;let h=0;for(const c of b.name)h=(h*31+c.charCodeAt(0))%360;const ini=b.name.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
 return `<svg viewBox="0 0 64 64"><polygon points="32,2 60,18 60,46 32,62 4,46 4,18" fill="hsl(${h},80%,18%)" stroke="hsl(${h},90%,60%)" stroke-width="2.5"/><text x="32" y="40" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="sans-serif">${esc(ini)}</text></svg>`}
-function addVictor(i,name,d){name=name.trim();if(!name)return;const b=S.badges[i];const v=b.victors.find(x=>key(x.n)==key(name));if(v){if(d&&(!v.d||d<v.d))v.d=d}else b.victors.push({n:name,d:d||null});save()}
+function knownVictorNames(){
+  const names=new Map();
+  S.badges.forEach(b=>b.victors.forEach(v=>{
+    const name=String(v.n||"").replace(/\s+/g," ").trim();
+    const k=key(name);
+    if(name&&k&&!names.has(k))names.set(k,name);
+  }));
+  return [...names.values()].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:"base"}));
+}
+function updateVictorDatalist(){
+  const dl=$("#victorNames");
+  if(!dl)return;
+  dl.innerHTML=knownVictorNames().map(name=>`<option value="${esc(name)}"></option>`).join("");
+}
+function addVictor(i,name,d){
+  const typed=String(name||"").replace(/\s+/g," ").trim();
+  if(!typed)return;
+  // Reuse the exact spelling of a name already recorded anywhere in UHBL.
+  const canonical=knownVictorNames().find(existing=>key(existing)===key(typed))||typed;
+  const b=S.badges[i];
+  const v=b.victors.find(x=>key(x.n)===key(canonical));
+  if(v){if(d&&(!v.d||d<v.d))v.d=d}
+  else b.victors.push({n:canonical,d:d||null});
+  save();
+}
 function stats(){const tot={},fc={};S.badges.forEach(b=>{b.victors.forEach(v=>tot[v.n]=(tot[v.n]||0)+1);const f=first(b);if(f)fc[f.n]=(fc[f.n]||0)+1});
 const srt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return{tot:srt(tot),fc:srt(fc)}}
 function rank(list){return list.length?list.map((e,i)=>`<div class="row ${i<3?"r"+(i+1):""}"><div class="rk">${i+1}</div><div class="n">${esc(e[0])}</div><div class="s">${e[1]}</div></div>`).join(""):`<div class="empty">No data yet</div>`}
 function render(){
+  updateVictorDatalist();
   const done=S.badges.filter(b=>b.victors.length).length;
   $("#count").textContent=`Completed: ${done} / ${S.badges.length} Badges`;
   const v=$("#view");
@@ -390,7 +419,7 @@ function render(){
   return hd+`<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
   <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Victors</div>
   <div class="vic">${on?b.victors.map((x,j)=>`<span class="chip ${f===x?"fc":""}">${f===x?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin?`<b data-rm="${i}:${j}">×</b>`:""}</span>`).join(""):`<span class="gm">Nobody yet</span>`}</div>
-  ${S.admin?`<div class="add"><input placeholder="Type a victor name + Enter" data-in="${i}"><button data-add="${i}">Add</button></div>
+  ${S.admin?`<div class="add"><input type="text" list="victorNames" placeholder="Type or select a victor name + Enter" data-in="${i}" aria-label="Victor name"><button data-add="${i}">Add</button></div>
   <div class="admin-tools">
     <div class="field id-field"><span class="lab">Roblox badge ID</span><input inputmode="numeric" placeholder="Enter badge ID" value="${esc(b.id||"")}" data-bid="${i}"></div>
     <button data-saveid="${i}">Save ID</button>
