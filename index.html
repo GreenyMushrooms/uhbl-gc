@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+97;6u<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -378,6 +378,10 @@ function render(){
   if(S.tab=="lb"){const s=stats();v.innerHTML=`<div class="lb"><div><h2>Most Total Badges</h2>${rank(s.tot)}</div><div><h2>Most First Clears</h2>${rank(s.fc)}</div></div>`;return}
   const q=S.q.toLowerCase();
   const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==!!b.victors.length)&&(!q||(b.name+" "+b.game+" "+b.victors.map(x=>x.n).join(" ")).toLowerCase().includes(q)));
+  // Group badges by difficulty, lowest tier first. Entry Level (0) through 6 stars;
+  // unassigned badges are kept at the end. Preserve original order within each tier.
+  const tierOrder=t=>t==null?7:t;
+  list.sort((a,b)=>tierOrder(a[0].t)-tierOrder(b[0].t)||a[1]-b[1]);
   let lt=null;
   v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=b.victors.length,f=first(b);
   const tierBadges=b.t==null?[]:S.badges.filter(x=>x.t===b.t);
