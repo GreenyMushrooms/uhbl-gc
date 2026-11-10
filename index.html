@@ -63,6 +63,7 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
 .top img{width:64px;height:64px;flex:none;object-fit:cover;border:1px solid var(--line)}
 .sep{grid-column:1/-1;display:flex;align-items:center;gap:14px;margin-top:14px;font-weight:900;font-size:15px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;text-shadow:0 0 12px rgba(255,215,0,.45)}
 .sep:first-child{margin-top:0}
+.sep-count{flex:none;white-space:nowrap;font-size:13px;letter-spacing:.08em;color:var(--tx);text-shadow:none}
 .sep::before,.sep::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.7}
 .tier{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--gold);margin-left:8px}
 .rl{display:flex;flex-direction:column;gap:18px;align-items:flex-start}
@@ -377,7 +378,9 @@ function render(){
   const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==!!b.victors.length)&&(!q||(b.name+" "+b.game+" "+b.victors.map(x=>x.n).join(" ")).toLowerCase().includes(q)));
   let lt=null;
   v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=b.victors.length,f=first(b);
-  const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep">${TL(b.t)}</div>`):"";
+  const tierBadges=b.t==null?[]:S.badges.filter(x=>x.t===b.t);
+  const tierDone=tierBadges.filter(x=>x.victors.length>0).length;
+  const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep"><span>${TL(b.t)}</span><span class="sep-count">${tierDone}/${tierBadges.length}</span></div>`):"";
   return hd+`<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
   <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Victors</div>
   <div class="vic">${on?b.victors.map((x,j)=>`<span class="chip ${f===x?"fc":""}">${f===x?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin?`<b data-rm="${i}:${j}">×</b>`:""}</span>`).join(""):`<span class="gm">Nobody yet</span>`}</div>
