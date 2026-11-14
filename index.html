@@ -56,6 +56,15 @@ button.danger{border-color:#803333;color:#ff7777}
 button.danger:hover{background:#ff5555;color:#000;border-color:#ff5555}
 @media(max-width:760px){.admin-create{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.admin-create{grid-template-columns:1fr}}
+
+.roblox-connect{width:100%;border:1px solid var(--line);padding:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:4px}
+.roblox-connect .field{display:flex;flex-direction:column;gap:5px;min-width:220px;flex:1}
+.roblox-connect input{width:100%;height:36px;min-width:0}
+.roblox-connect button{height:36px}
+.roblox-profile{width:100%;font-size:13px;color:var(--mut);white-space:pre-wrap}
+.roblox-profile strong{color:var(--tx)}
+.roblox-connect button:disabled{opacity:.45;cursor:not-allowed}
+
 .lab{font-size:11px;color:var(--mut);letter-spacing:.12em;text-transform:uppercase}
 .panel{border:1px solid var(--line);background:rgba(10,10,10,.92);padding:16px;margin-bottom:16px;display:none;gap:10px;flex-wrap:wrap;align-items:center}
 .panel.show{display:flex}
@@ -87,6 +96,18 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
 #rres .top img,#rres .top svg{width:96px;height:96px}
 #rres .nm{font-size:24px}
 #rres .card.spin{border-color:var(--acc);box-shadow:0 0 18px rgba(0,229,255,.35)}
+.profile-panel{display:flex;flex-direction:column;align-items:stretch}
+.profile-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.profile-card{background:var(--card);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:8px}
+.profile-card button{align-self:flex-start}
+.profile-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.profile-stat{background:#111;border:1px solid var(--line);padding:10px}
+.profile-stat strong{display:block;font-size:22px;color:var(--ok)}
+.challenge-code{font:700 14px ui-monospace,monospace;letter-spacing:.06em;padding:12px;background:#111;border:1px dashed var(--acc);overflow-wrap:anywhere}
+.profile-help{font-size:12px;color:var(--mut);line-height:1.5}
+.profile-panel button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:600px){.profile-actions{align-items:stretch}.profile-actions button{flex:1}}
 </style>
 </head>
 <body>
@@ -98,10 +119,33 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
   <input id="q" placeholder="Search badge, game or player…" size="26">
   <div class="grp" id="flt"><button data-f="all" class="on">All</button><button data-f="done">Completed</button><button data-f="todo">Incomplete</button></div>
   <div class="sp"></div>
-  <div class="grp" id="tabs"><button data-t="tr" class="on">Badge Tracker</button><button data-t="lb">Leaderboard</button><button data-t="ro">Roulette</button></div>
+  <div class="grp" id="tabs"><button data-t="tr" class="on">Badge Tracker</button><button data-t="lb">Leaderboard</button><button data-t="ro">Roulette</button><button data-t="pr">Player Profiles</button></div>
   <button id="adm">Admin: Off</button>
 </header>
 <main>
+  <div class="panel show profile-panel" id="profilePanel">
+    <div class="lab" style="width:100%">UHBL account · Personal Roblox profile</div>
+    <div class="profile-actions">
+      <button id="accountLogin" type="button">Sign in / Create profile</button>
+      <button id="accountLogout" type="button" disabled>Sign out</button>
+      <span class="msg" id="accountStatus" aria-live="polite">Sign in with Google to create your own private UHBL profile.</span>
+    </div>
+    <div class="roblox-connect">
+      <div class="lab" style="width:100%">Link your own Roblox account</div>
+      <label class="field"><span class="lab">Roblox username</span><input id="robloxUsername" type="text" placeholder="Enter your Roblox username" maxlength="20" autocomplete="off"></label>
+      <button id="robloxLinkStart" type="button" disabled>Start ownership verification</button>
+      <div id="robloxChallenge" style="display:none;width:100%;display:none;flex-direction:column;gap:8px">
+        <div class="profile-help">Temporarily add this exact code to the About/description field on the Roblox account, save it, then return here and verify. Remove the code after linking.</div>
+        <div class="challenge-code" id="robloxChallengeCode"></div>
+        <div class="profile-actions"><button id="copyRobloxChallenge" type="button">Copy code</button><button id="robloxVerifyLink" type="button">Verify ownership</button></div>
+      </div>
+      <div class="profile-actions">
+        <button id="robloxSync" type="button" disabled>Sync my badges</button>
+      </div>
+      <div class="roblox-profile" id="robloxProfileStatus" aria-live="polite">Sign in first, then prove ownership of your Roblox account. Each UHBL profile can sync only its verified linked Roblox account.</div>
+    </div>
+    <div class="profile-help">Your personal progress is stored under your Firebase user ID. The old community victor list and leaderboard remain available; matching legacy records will be copied into your profile once, marked as legacy until Roblox inventory confirms them.</div>
+  </div>
   <div class="panel" id="apanel">
     <div class="lab" style="width:100%">Badge management · Create a badge here, or delete badges from their cards below.</div>
     <div class="admin-create">
@@ -365,7 +409,11 @@ const bk=b=>b.game+"|"+b.name;
 const DEFAULT_TIERS={"Taxi Simulator: The Future Challenges|Conqueror's Avenue":5};
 const DEFAULT_IDS={"Super Bomb Survival|6.0 Hero":"2144689474","Project Lazarus: 💀 ZOMBIES 💀|Round 50":"2124694495","Five Nights at Roblox 2|Night 7 (7/20)":"2126858225","Dancing Line: The Rebirth|Wrath of the Squid: Perfection":"1568719541298137","CRAZY HORSE GAME 🐴|TRUE 100%":"1536445088648395","Isle of the Ether|ether's edge":"2138685484","A-P: The Perfect Run|A-P: Perfect Run Completed":"3700905532617612","Nocturner|Ira de Dis":"1305327722193590","Night Before the Blizzard|Extreme Difficulty":"3893244528443260","Simple Hiking: Hiking of The Soul|Formidable Mental Fortitude":"2152111386","A ROBLOX Quest: Elements of Robloxia|Tower Hero":"150267355","The Battle Bricks|CHAPTER V - TREE(3)":"1245678289047574","tower of ten floors challenge|You S+ Ranked in TRUE MODE!":"684202039520385","Urbis|Jack of All Trades":"466154086","Cyber Arena|TRUE LETHALITY":"106340722446560","Notoriety|True Criminal":"1873037302","Dogwatching 3|★ALL-STARS★":"2940797272570057","a dream youve had before|judgement":"2124779975","Super Golf!|Teamwork!":"2124906971","WEGA's Challenge: THE ETERNAL LAPPIN'|Death is imminent":"1538842330073085","Isolarium|Dreamer":"3770164287626733","The True RailGun Obby|Finish the HARDCORE Railgun Obby":"2263993068352971","Boss6:06|KEEP SMILING":"1861014210820882","Isle|The Replay":"2244810538289475","Gallery of Ordered Instances|The Lark o'er Ocean's Door":"3588353908481119","Find the Corns|Cornpletionist":"3375638599355244","Pressure|This Badge Really Sucks":"223335639160189","Derelict|Melisande, The Oracle":"3593693706451380","> home|One for you, One for me, One for the team.":"3115715820754562","Find The Binguses|???":"1855286832847764","Decloid Chaos: Overcharged|Strong Bridge":"3276036348278052","Speed Run Adventure 2|Completionist - Speed Run Adventure 2":"1933407445447860","ZIPLINE OBBY 2024|DEATHLESS WIN":"1543382810024990","[🗣️] GUESSER OBBY 💯|Bad research":"1334898911146783","Tropical Golf|Process of Rebirth":"836303990657498","Catalog Gear Place|Cosmoknight's Fish":"1540429005835940","Keep the Platform from Falling 2|Travelled From Dawn to Dusk":"2605843865953446","Pie Hiker's Reverie|Pie Liker":"3746604785699388","Arcane Odyssey|Slayer of Ancient Dragons":"4110403995262142","PM606 Exit Pizza|THANKS FOR PLAYING":"887060571526867","six hours of silence|survive":"3067882985271483","razor passage|Razor Passage":"2111598183706429","Existential Dreams|Night 7":"3301348354032804","MGDWare|You did this to Yourself":"2146154975","Cliffside Station|CEO of Cliffside":"3782980822709474","STAR GLITCHER ~ REVITALIZED|Ultrahell but No Death":"4197950691419578","UMG:Phobia|How?":"3942610581932803","Depth Spelunking|Madman":"2680529696956434","SpeedBLOX|First-Person Completionist":"1492233897112796","cybertzas bonanza V2|gasolina":"3548165143324481","Every Jump...|for good":"1880548678466302","I Hate You.|Casual Muncher":"2125616449","Virus Alert|“MYDOOM” Complete":"2432886942476190","Climbing Game|Angelic Assessment [Brutal] [Featured Map]":"459200780551038","Elite Buttering|elitemost buttering":"3310200555237584","Roblox Karts|Veteran Speedster":"2433249835799004","Find The Alalals|Scavenger Hunt":"546477782037136","FnF Multiverse|Dirty Tricks":"2840109288981399","Worlds Hardest Game|deathless win":"2127793818","CMYKrash [Modifiers]|HEXTreme Completion!":"2630373974235967","Run|The Perfect Run":"3897936924584901","Area 66|Back Again":"569230848494690","Dimension Lock|Dimension King":"2327322059508498","The Reactor [Maintenance]|Hell Shift":"2513165307143539","No Mercy: The Gameshow|I feel fear no longer":"662434445713938","The Crusher (Survival Obby)|Aced it All":"1803192828","Pressure Practice Place|Death Welcomes You Home":"1907083615682387","neon❖Knights|Without a Voice":"2145829581","Sound Space|BRRR Champion":"1295829428282824","1 Minute Until Global Catastrophe|Misery":"2091374870308730","Friday Night Partying|[PFC] BOOYAH!!!":"3512892274408927","whizzbang|2000 yard stare":"184469014994789","sun, moon, and star. to these i bid adieu|Knockin' on Heaven's Gate":"2127750606","Project Somnia|dreams of dystopia":"1816376946432764","Minus Elevation|Floor 100":"4010890666413972","OPERATION COYOTE|100":"1323638947673349","Paradigm-Shift Tower Defense|Commander One":"326843937406824","Escape Room|Winner Winner Chicken Dinner":"680213537338947","Beat Block Boulevard|Beat Block Boulevard":"146116990505669","This Game is Pain|No. Just... No.":"3632301819243552","Flood Escape 2 🌊|Luminance [Crazy+]":"331505911477562","World's Hardest Obby|World's HARDEST obby":"3280903243230375","Challenger's Street|Challenger's Street":"2149920147","obby with a thingamasilly at the end!!|BYFATETOFATE":"3489370334105942","SCP: The Red Lake|Hell Showdown":"462112193404421","OVER-DRILLED|The City":"3200622397565187","The Crew's Night|TORMENTED":"3501536221527787","A Way Everything Goes|LOCKED IN!":"3867729815748716","Survive The Disasters 2|100 Streak (Hardcore)":"545795060","Obby Royale|Death Defier":"2128075325","Defend The Core II|Fearsome Five - Perfectionist Mode Complete!":"3964471219196562","Portu After Dark|Sleepover":"2494273146112543","A-888: Project: Creedbreaker|0 Seconds to Midnight":"3377676119848774","Arena: Tower Defense!|Perfect Hybrid Scout":"2126708245","Residence Massacre|Completionist":"2123211861662724","Boss Fighting Stages|Draco Arcade LVL3:[Complete]":"2142090994","speed demon boss fight (real)|0-S Sanguine Spectre":"2787036574019132","Azure Mines|Completionist":"2129237314","1010!|Score 250,000":"2124479617","PIBBS' BADGER|TRUE COMPLETIONIST (96 BADGES)":"3396602994384598","Outrun the Nightmare|Outran the Psychosis":"1384637951205552","Sisyphus Simulator|All Trials":"419306350768576","Find the Doge Heads 2|Overachiever Doge":"2124469233","Tower Defense Simulator|Triumph Voidcore":"2895606253207273","The RakOOF|What are you trying to prove?":"4252616618926877","BCWR: Reign of Lord Astaroth|Soul of Oblivion":"3268326459559596","Every (Minigames) End|The One Above Kaizo!":"2085103997678095","Deity Arena|L.":"2124804138","IN 1 MINUTE YOU WILL EXPLODE|How did we get here?":"331825303180361","Survival The SML the Killers|AW SHUCKS":"3257181015068885","Taxi Simulator 2|Guest Land":"2655881046694087","Strange Place|Final boss":"2127021083","Dummies vs Noobs|GO OUTSIDE":"2144392606","Undertale: Judgement Day|...":"2124746912","Celestial Caverns|Warehouse":"2590250457527558","Dandy's World|Twisteds Fear Me.":"489243865301208","Pool|A Goliath":"973637750890919","KittyLand (Horror)|True Squad Nightmare":"1005462710063548","Resurrections|Bind All the Flowers":"2506617196729085","Confinement|Stocked Up":"1374635805716145","Crystalis Boss Fights|Lightwing, Begone!":"4107732111901533","🚩Super Check Point!|Classic Champion":"2129541743","Allusions|[HOLLOW IMITATION]":"2578040513440273","Shifts at Big Q's|6/20":"2128256477","PSYCHOCATS 2|True Perfectionist":"2125048006","Pandi's Aim Trainer|25,000 in Score!":"1670955772160660","Tower Battles: Battlefront|Lone Void Specialist":"2128712186","Fumo Horrors|Survive a XK OUTBREAK Round":"2142574923","Loop|Day 100":"1782434602772191","🌱 Grass Cutting Incremental 🌱|Omega Loop [Bonus]":"2152554133","Entry Point|Phoenix Rising":"2124535141","Project: RUSHER|3000 Rating":"1195419684923066","obby definitive edition|MEET THE O̶W̶N̶E̶R̶ BLOODLESS ONE":"3161559228909797","Blackout: Revival|DEATH'S VERDICT":"1627854340685068","The Difficulty Upgrade Tree: Regrown|Limits of All Chaos (Lap Cluster B)":"3807974385608602","flop world|Floor 250":"2382366480490752","Something Boss Fights|CHALLENGE: Calamity Voril":"1585279278162385","Balance|Balance Pro":"2041282651927587","Reminiscence Zombies|Zombie Scout":"276670746098486","Caustic Confines|Avenge the Fallen":"1094234119254458","Ultimate Retro Night: Singleplayer|He Burns":"102156703159466","Be Saga|Be True Completionist":"1419580412374145","Industrialist|Still possible!":"3010191455762019","Random 6:06 Sublevels|COMPLETIONIST":"2982537757487972","THE CRIMSON PERPLEXION|TENEBROUS HELLFIRE":"1545382135297039","Tower of Hell|Certified Beast":"4002614570086808","TRIA.os - Escape|Master of Difficulties":"1617420806532574","Just Shapes and Beats|1000%":"14758685096230","Zenith Tower|THANKS FOR PLAYING":"3401048837899809","Skill Based Boss Fights|A Forgotten Catastrophe":"3834149559424589","Five Nights at The Gang's|100% Game (Currently Bugged)":"2513685121609340","Supreme Kaizo Robot 64 2*3: 2: Fixed Version|45 Cold Thing !!!!!!!!!!!!!!!!!!!!!!!":"2404901326672935","Super Deadly Levels List|Cruel Punishment":"497496739477207","Basically FNF: Remix|Camellia Dan":"2382393400075575","Friendly Smile 6:06|Hallucination":"2142357976","🎮 Cornerstone Arcade Reborn|Hardcore Completionist":"3983648636709993","SUNDOWNER|PERDITION: CESSATION":"2566699870453655","Five Nights at Mexik's 1 :REMASTERED|What?":"2473553935649761","Defend the Statue: Eras of Conflict|Loremaster":"3685286910599393","Frozen Over Games Hub|The Ultimate Badge":"2743922622065331","Party Chaos|Monochromatic Hell":"2842166401963102","Realm Archive|Every Last Secret":"2866367165754913","Find The Amoguses|Novisor Amogus 2":"2125146438","Tower Invaders: Organized Chaos|The End":"2718193388755270","Find the BFB Characters|Main Realm Medallion":"2151634007180491","Isaac's Minesweeper|Get 90% Completion":"692598451103550","Defend The Core - Remastered|The Promise":"925051995736017","A Jumpless Demise|Above The Darkness":"1140810596059302","Deadfront [BETA]|NIGHT 100":"933582771939366","No Exit [10 Player Obby]|Hell Is Other People":"511118968423632","Kaizo Adventure Forward: Star Savior|All stars":"2956549780868346","Football Fusion 3|Legendary":"1093089118408958","I Wanna Test The Game|Eye Defeated The Greatest":"3758765531462525","Radiance Recreation (EXTREME MODE)|Goku's Wrath No Hit":"3455631288165551","Taxi Simulator (Brick Cars Edition)|Over Achiever of Lanes!":"538428880","King of Wallhops|Bluebob's Trials":"2113692848221736","The Gang's Warehouse|INVICTUS":"3256856447039175","I want to be free|tower1 Golden":"261731099405268","The Train Tunnels 🚂|Last Stop":"1899058127972505","Aphasic Song|Segel 4 Empat":"103959368639049","FNAAWC 3|Pardoned":"3470534424164839","The Destroyed Future|Approaching Storm - 300%":"3629691917367515","Modespice Extra++|FLAWLESS TRUE SQUID":"3486554656517732","Defend the Statue|TALE OF TESTAMENT":"2130231219","Bee Swarm Simulator|Mountain Top Grandmaster":"2455366474634025","smile|Winner! (Kaizo Mode)":"4481177898980930","The Final Stand 2|Night 30 - Impossible":"3429546795677912","The Zombie's Revenge|Azura Award":"480785527418397","Enigmatic Void|???":"2124589354","Flood Escape Ultimate ⚡|Ascension to Heaven":"4116335988945780","One Thousand Rooms|Taking an Immeasurable Risk":"2216593496280568","Enfosi|MANIAC COMPLETION":"328301761710109","Randomly Generated Droids|FOOLISH!!!!":"4020345700990924","Japanese Meme Elevator|Legend PERFECT RUN":"1931313792863792","Zipline Obby 2025|Deathless Completion":"149239199498488","The Omniverse|Psychotic Sociopath (Video Proof)":"2124934929","Liquid Breakout|Checklist - All Maps":"3096677987360053","Sword Fighting Chaos|Elite rank":"3951133187511878","Malachite Miners 2|Voluntary Torment":"2660536091725298","TS!CouchSwap Headed Reded (Unofficial)|Desecration":"2128206188","Caleb's Soul Crushing Domain|Chaotic Tower - All Jumps":"2405693705723458","Kaizo Robot 64 - Alter|Still Having Fun?":"1545048226794541","DLB: Custom Night|One Of Us.":"2768666680871767","Eternal Towers of Hell|Beat The Tower of Cruel Punishment":"2125416545","CG Custom Maps Toplist [CGCR]|The Apostle of the Void":"562468698160673","Ascension to Taser|who do you think you are?":"1950236288755467","rosu!mania Music + Rhythm|Midnight Illusion III":"2127988811","The Great Centurial: Revived|Completed 61-70":"2127507255","(CI PHASE 2) THE GAUNTLET|PARASITIC DEMISE":"4098427504008486","Devoid|Devoid - Completed Hardcore Mode":"2210300522234642","Minesweeper Duels|S+ Rank":"3919762573448774","True lap 3 hardmode.|SUBLEVEL 120":"3656422509798195","Find the Cubes!|Verified Legend of the Multicube":"3528743272391928","The Ultimate Destroyer of Limits|Limitless":"3274649230832221","[Race to the End of Time]|Some things weren't made to be beaten":"2412613705907502","Kaizo Robot 64|Out of the Park":"1119210290988366","Nullscape|100% EXTREME":"3659971402224657","NOLTN's Hellbeats Archive|finally free, feeling freedom":"1610857310610080","Beat Bounce|The Milky Wave":"1435215198823485","John Man ALL JALAPENOS|I'm here.":"925727127321812","⚜️ The House ⚜️|Misery Mettle":"2126411427","Stairway to Heaven|Ascended":"2746535919927396","The Eternal Abyss|Tower of The Quest For Perfection":"1629929481114813","Touge Legends: Reborn|Who Needs Power?":"3505984142251453","Taxi Simulator: The Future Challenges|Conqueror's Avenue":"1672612133705723"};
 SAMPLE.forEach(b=>{b.id=DEFAULT_IDS[bk(b)]||null;b.t=DEFAULT_TIERS[bk(b)]??null});
-let S={badges:SAMPLE.map(b=>({...b,victors:[]})),deleted:[],admin:false,f:"all",q:"",tab:"tr"};
+let S={badges:SAMPLE.map(b=>({...b,victors:[]})),deleted:[],admin:false,f:"all",q:"",tab:"tr",profileUid:null,profileData:null,myProgress:{},publicProfiles:[],selectedProfileUid:null,legacyLoaded:false};
+const LEGACY_LOCAL_DATA=(()=>{try{return JSON.parse(localStorage.getItem("uhbl2")||"{}")}catch(e){return {}}})();
+let legacyReadyResolve;
+const legacyReady=new Promise(resolve=>{legacyReadyResolve=resolve});
+window.UHBL_APP_STATE=S;
 const hashKey=s=>{let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return"k"+h};
 const hk=b=>hashKey(bk(b));
 const FIND_CUBES_LEGACY_KEY="Find the Cubes!|Legend of The Multicube";
@@ -409,6 +457,7 @@ window.applyRemote=d=>{
   S.badges=SAMPLE.filter(b=>!S.deleted.includes(bk(b))).map(b=>({...b,victors:[]}));
   S.badges.forEach(b=>{const legacy=b.game==="Find the Cubes!"?d&&d[FIND_CUBES_LEGACY_HASH]:null;const x=d&&d[hk(b)]||legacy;b.victors=x&&Array.isArray(x.v)?x.v:[];b.id=x&&typeof x.id==="string"?(x.id?x.id:null):(DEFAULT_IDS[bk(b)]||null);b.t=x&&x.t!=null?x.t:(DEFAULT_TIERS[bk(b)]??null)});
   addCustomRecords(meta.custom,S.badges);
+  S.legacyLoaded=true;legacyReadyResolve();
   render();loadIcons();
 };
 const TL=t=>t==null?"":t===0?"ENTRY LEVEL":"★".repeat(t)+" "+t+(t===1?" STAR":" STARS");
@@ -536,27 +585,45 @@ function addVictor(i,name,d){
 function stats(){const tot={},fc={};S.badges.forEach(b=>{b.victors.forEach(v=>tot[v.n]=(tot[v.n]||0)+1);const f=first(b);if(f)fc[f.n]=(fc[f.n]||0)+1});
 const srt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return{tot:srt(tot),fc:srt(fc)}}
 function rank(list){return list.length?list.map((e,i)=>`<div class="row ${i<3?"r"+(i+1):""}"><div class="rk">${i+1}</div><div class="n">${esc(e[0])}</div><div class="s">${e[1]}</div></div>`).join(""):`<div class="empty">No data yet</div>`}
+function ownsBadge(b){
+  if(!S.profileUid)return b.victors.length>0;
+  return Boolean(S.myProgress&&S.myProgress[bk(b)])||Boolean(S.profileData?.linkedRoblox?.username&&b.victors.some(v=>key(v.n)===key(S.profileData.linkedRoblox.username)));
+}
+function renderProfiles(){
+  const v=$("#view");
+  if(S.selectedProfileUid){
+    const p=S.publicProfiles.find(x=>x.uid===S.selectedProfileUid);
+    if(!p){S.selectedProfileUid=null;return renderProfiles()}
+    const keys=Array.isArray(p.earnedBadgeKeys)?p.earnedBadgeKeys:[];
+    const earned=S.badges.filter(b=>keys.includes(bk(b)));
+    v.innerHTML=`<div class="profile-card"><button data-profiles-back type="button">← All profiles</button><div class="nm">${esc(p.displayName||p.robloxUsername||"UHBL Player")}</div><div class="gm">@${esc(p.robloxUsername||"Unknown Roblox account")}</div><div class="profile-stats"><div class="profile-stat"><strong>${Number(p.ownedCount||0)}</strong><span class="gm">Tracked badges</span></div><div class="profile-stat"><strong>${Number(p.verifiedOwnedCount||0)}</strong><span class="gm">Roblox-verified</span></div><div class="profile-stat"><strong>${Number(p.legacyCount||0)}</strong><span class="gm">Legacy records</span></div></div><h2>Achievements</h2>${earned.length?`<div class="profile-grid">${earned.map(b=>`<div class="profile-card"><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}</div>${b.t!=null?`<div class="tier">${TL(b.t)}</div>`:""}</div>`).join("")}</div>`:`<div class="empty">No tracked badges published yet.</div>`}</div>`;
+    return;
+  }
+  const profiles=[...S.publicProfiles].sort((a,b)=>(Number(b.verifiedOwnedCount||0)-Number(a.verifiedOwnedCount||0))||String(a.robloxUsername||"").localeCompare(String(b.robloxUsername||"")));
+  v.innerHTML=profiles.length?`<div class="profile-grid">${profiles.map(p=>`<div class="profile-card"><div class="nm">${esc(p.displayName||p.robloxUsername||"UHBL Player")}</div><div class="gm">@${esc(p.robloxUsername||"Unknown Roblox account")}</div><div class="gm">${Number(p.verifiedOwnedCount||0)} verified · ${Number(p.ownedCount||0)} total tracked badges</div><button data-open-profile="${esc(p.uid)}" type="button">View profile</button></div>`).join("")}</div>`:`<div class="empty">No public player profiles yet. Sign in, link your Roblox account, and sync badges to create the first profile.</div>`;
+}
 function render(){
   updateVictorDatalist();
-  const done=S.badges.filter(b=>b.victors.length).length;
-  $("#count").textContent=`Completed: ${done} / ${S.badges.length} Badges`;
+  const done=S.badges.filter(b=>ownsBadge(b)).length;
+  $("#count").textContent=S.profileUid?`My badges: ${done} / ${S.badges.length}`:`Community clears: ${done} / ${S.badges.length}`;
   const v=$("#view");
   if(S.tab=="ro"){roulette();return}
-  if(S.tab=="lb"){const s=stats();v.innerHTML=`<div class="lb"><div><h2>Most Total Badges</h2>${rank(s.tot)}</div><div><h2>Most First Clears</h2>${rank(s.fc)}</div></div>`;return}
+  if(S.tab=="lb"){const s=stats();v.innerHTML=`<div class="lb"><div><h2>Community · Most Total Badges</h2>${rank(s.tot)}</div><div><h2>Community · Most First Clears</h2>${rank(s.fc)}</div></div>`;return}
+  if(S.tab=="pr"){renderProfiles();return}
   const q=S.q.toLowerCase();
-  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==!!b.victors.length)&&(!q||(b.name+" "+b.game+" "+b.victors.map(x=>x.n).join(" ")).toLowerCase().includes(q)));
+  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==ownsBadge(b))&&(!q||(b.name+" "+b.game+" "+b.victors.map(x=>x.n).join(" ")).toLowerCase().includes(q)));
   // Group badges by difficulty, lowest tier first. Entry Level (0) through 6 stars;
   // unassigned badges are kept at the end. Preserve original order within each tier.
   const tierOrder=t=>t==null?7:t;
   list.sort((a,b)=>tierOrder(a[0].t)-tierOrder(b[0].t)||a[1]-b[1]);
   let lt=null;
-  v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=b.victors.length,f=first(b);
+  v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),f=first(b);
   const tierBadges=b.t==null?[]:S.badges.filter(x=>x.t===b.t);
-  const tierDone=tierBadges.filter(x=>x.victors.length>0).length;
+  const tierDone=tierBadges.filter(x=>ownsBadge(x)).length;
   const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep"><span>${TL(b.t)}</span><span class="sep-count">${tierDone}/${tierBadges.length}</span></div>`):"";
   return hd+`<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
-  <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Victors</div>
-  <div class="vic">${on?b.victors.map((x,j)=>`<span class="chip ${f===x?"fc":""}">${f===x?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin?`<b data-rm="${i}:${j}">×</b>`:""}</span>`).join(""):`<span class="gm">Nobody yet</span>`}</div>
+  <div class="tag">${S.profileUid?(on?"OWNED BY YOU":"NOT OWNED BY YOU"):(on?"COMPLETED":"UNCOMPLETED")}</div><div class="lab">Community victors</div>
+  <div class="vic">${b.victors.length?b.victors.map((x,j)=>`<span class="chip ${f===x?"fc":""}">${f===x?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin?`<b data-rm="${i}:${j}">×</b>`:""}</span>`).join(""):(on?`<span class="gm">Owned in your personal profile</span>`:`<span class="gm">Nobody yet</span>`)}</div>
   ${S.admin?`<div class="add"><input type="text" list="victorNames" placeholder="Type or select a victor name + Enter" data-in="${i}" aria-label="Victor name"><button data-add="${i}">Add</button></div>
   <div class="admin-tools">
     <div class="field id-field"><span class="lab">Roblox badge ID</span><input inputmode="numeric" placeholder="Enter badge ID" value="${esc(b.id||"")}" data-bid="${i}"></div>
@@ -570,10 +637,10 @@ function render(){
   </div>`:""}</div>`}).join("")}</div>`:`<div class="empty">No badges match.</div>`}
 // ---- roulette ----
 S.rt="any";S.rs="any";S.rolling=false;
-const pool=()=>S.badges.filter(b=>(S.rt=="any"||b.t===S.rt)&&(S.rs=="any"||(S.rs=="done")==!!b.victors.length));
-function resCard(b,spin){const on=b.victors.length;
+const pool=()=>S.badges.filter(b=>(S.rt=="any"||b.t===S.rt)&&(S.rs=="any"||(S.rs=="done")==ownsBadge(b)));
+function resCard(b,spin){const on=ownsBadge(b);
   return `<div class="card ${on?"on":"off"} ${spin?"spin":""}" style="${on?"":"filter:none;opacity:1"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
-  <div class="tag">${on?"CLEARED BY "+b.victors.length:"NOBODY HAS CLEARED THIS"}</div></div>`}
+  <div class="tag">${S.profileUid?(on?"OWNED BY YOU":"NOT OWNED BY YOU"):(on?"CLEARED BY "+b.victors.length:"NOBODY HAS CLEARED THIS")}</div></div>`}
 function roulette(){
   const tb=[["any","Any tier"],[0,"Entry level"],...[1,2,3,4,5,6].map(n=>[n,n+" ★"])];
   const sb=[["any","Any"],["todo","Not cleared"],["done","Cleared"]];
@@ -588,6 +655,8 @@ function doRoll(){if(S.rolling)return;const p=pool(),r=$("#rres");
   const iv=setInterval(()=>{k++;if(k>=18){clearInterval(iv);S.rolling=false;S.roll=S.badges.indexOf(final);r.innerHTML=resCard(final);return}
     r.innerHTML=resCard(p[Math.random()*p.length|0],true)},70+k*6)}
 document.addEventListener("click",e=>{const t=e.target;
+  if(t.dataset.openProfile){S.selectedProfileUid=t.dataset.openProfile;renderProfiles()}
+  if(t.dataset.profilesBack!=null){S.selectedProfileUid=null;renderProfiles()}
   if(t.dataset.rt!=null){S.rt=t.dataset.rt=="any"?"any":+t.dataset.rt;S.roll=null;render()}
   if(t.dataset.rs!=null){S.rs=t.dataset.rs;S.roll=null;render()}
   if(t.dataset.roll)doRoll();
@@ -609,7 +678,7 @@ document.addEventListener("change",e=>{const t=e.target;if(t.dataset.tier!=null)
 document.addEventListener("keydown",e=>{if(e.key=="Enter"&&e.target.dataset.in!=null){addVictor(+e.target.dataset.in,e.target.value);render()}if(e.key=="Enter"&&e.target.dataset.bid!=null){const i=+e.target.dataset.bid;document.querySelector(`[data-saveid="${i}"]`).click()}});
 $("#q").oninput=e=>{S.q=e.target.value;render()};
 $("#adm").onclick=async e=>{const btn=e.currentTarget,want=!S.admin;
-  if(window.LIVE){if(want){if(!(await window.fbLogin())){if(window.ADMIN_UID)$("#amsg").textContent="That Google account isn't the admin.";$("#apanel").classList.add("show");return}}else window.fbLogout()}
+  if(window.LIVE&&want){if(!(await window.fbLogin())){$("#amsg").textContent="That Google account isn't the admin.";$("#apanel").classList.add("show");return}}
   S.admin=want;btn.textContent="Admin: "+(S.admin?"On":"Off");btn.classList.toggle("on",S.admin);$("#apanel").classList.toggle("show",S.admin);render()};
 $("#createBadge").onclick=()=>{
   if(!S.admin)return;
@@ -626,6 +695,177 @@ $("#createBadge").onclick=()=>{
 };
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function jget(url,options={}){for(let a=0;a<4;a++){const r=await fetch(url,options);if(r.status==429){await sleep(2500*(a+1));continue}if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}throw new Error("rate limited")}
+
+// ---- Personal Roblox account linking and profile sync ----
+const ROBLOX_WORKER_URL="https://uhbl-roblox-api.jolantern368.workers.dev";
+let pendingRobloxChallenge=null;
+function accountStatus(message){const el=$("#accountStatus");if(el)el.textContent=message}
+function robloxStatus(message){const el=$("#robloxProfileStatus");if(el)el.textContent=message}
+function linkedProfile(){return S.profileData&&S.profileData.linkedRoblox?S.profileData.linkedRoblox:null}
+function updateAccountUI(user,profile){
+  const login=$("#accountLogin"),logout=$("#accountLogout"),start=$("#robloxLinkStart"),sync=$("#robloxSync"),name=$("#robloxUsername");
+  if(login)login.disabled=!!user;if(logout)logout.disabled=!user;
+  if(start)start.disabled=!user||!!profile?.linkedRoblox;
+  if(sync)sync.disabled=!user||!profile?.linkedRoblox?.linkToken;
+  if(name&&profile?.linkedRoblox?.username){name.value=profile.linkedRoblox.username;name.disabled=true}
+  else if(name){name.disabled=!user;if(!user)name.value=""}
+  if(user){
+    accountStatus(`Signed in as ${user.displayName||user.email||"UHBL user"}. Your personal progress is private to this Firebase account.`);
+    if(profile?.linkedRoblox){
+      robloxStatus(`Verified Roblox account: @${profile.linkedRoblox.username} · ID ${profile.linkedRoblox.id}. This UHBL profile can only sync this verified account.`);
+      if(start)start.textContent="Account linked";
+    }else{
+      robloxStatus("No Roblox account linked yet. Start ownership verification to connect your own account.");
+      if(start)start.textContent="Start ownership verification";
+    }
+  }else{
+    accountStatus("Sign in with Google to create your own private UHBL profile.");
+    robloxStatus("Sign in first, then prove ownership of your Roblox account.");
+    if(start)start.textContent="Start ownership verification";
+  }
+}
+async function workerPost(path,body){
+  if(typeof window.fbGetIdToken!=="function")throw new Error("Firebase sign-in is not ready. Reload and sign in again.");
+  const idToken=await window.fbGetIdToken();
+  const response=await fetch(`${ROBLOX_WORKER_URL}${path}`,{
+    method:"POST",cache:"no-store",
+    headers:{"Authorization":`Bearer ${idToken}`,"Content-Type":"application/json"},
+    body:JSON.stringify(body||{})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(`${data.error||"Request failed"}${data.hint?" · "+data.hint:""} (HTTP ${response.status})`);
+  return data;
+}
+async function startRobloxLink(){
+  const user=S.profileUid,username=$("#robloxUsername").value.trim();
+  if(!user){robloxStatus("Sign in to UHBL first.");return}
+  if(linkedProfile()){robloxStatus("A Roblox account is already linked to this UHBL profile. Unlinking/replacing accounts is intentionally disabled in this first secure release.");return}
+  if(!username){robloxStatus("Enter your Roblox username first.");return}
+  const button=$("#robloxLinkStart");button.disabled=true;button.textContent="Creating challenge…";
+  try{
+    const data=await workerPost("/roblox/link/start",{username});
+    pendingRobloxChallenge=data.challengeToken;
+    $("#robloxChallengeCode").textContent=data.code;
+    $("#robloxChallenge").style.display="flex";
+    robloxStatus(`Found @${data.profile.username}. Add the exact code below to that Roblox profile's About/description, save it, then click Verify ownership. The code expires in 15 minutes.`);
+  }catch(error){robloxStatus(`Could not start account linking: ${error.message}`)}
+  finally{button.disabled=!!linkedProfile()||!S.profileUid;button.textContent=linkedProfile()?"Account linked":"Start ownership verification"}
+}
+function legacyProgressFor(username){
+  const result={};
+  const add=(game,name,victors,id=null)=>{
+    if(!Array.isArray(victors))return;
+    const hit=victors.filter(v=>v&&typeof v.n==="string"&&key(v.n)===key(username));
+    if(!hit.length)return;
+    const dates=hit.map(v=>v.d).filter(Boolean).sort();
+    const badgeKey=`${game}|${name}`;
+    if(!result[badgeKey])result[badgeKey]={badgeId:id||null,earnedAt:dates[0]||null,source:"legacy",verified:false};
+  };
+  // Preserve records loaded from the existing shared Firestore community state.
+  S.badges.forEach(b=>add(b.game,b.name,b.victors,b.id));
+  // Also preserve local-only records from the old browser version if they were not in Firestore.
+  Object.entries(LEGACY_LOCAL_DATA||{}).forEach(([badgeKey,record])=>{
+    if(badgeKey.startsWith("__")||!record||typeof record!=="object")return;
+    const split=badgeKey.indexOf("|");if(split<0)return;
+    add(badgeKey.slice(0,split),badgeKey.slice(split+1),record.v,record.id||null);
+  });
+  (LEGACY_LOCAL_DATA.__custom||[]).forEach(b=>{if(b&&b.game&&b.name)add(b.game,b.name,b.v,b.id||null)});
+  return result;
+}
+async function verifyRobloxLink(){
+  if(!pendingRobloxChallenge){robloxStatus("Start ownership verification first.");return}
+  const button=$("#robloxVerifyLink");button.disabled=true;button.textContent="Verifying…";
+  try{
+    const data=await workerPost("/roblox/link/verify",{challengeToken:pendingRobloxChallenge});
+    const previous=await window.fbLoadUserProfile();
+    const profile=data.profile;
+    const progress={...(previous.progress||{})};
+    let migrated=0;
+    if(!previous.legacyMigration?.completedAt){
+      // Wait briefly for the existing community Firestore snapshot so the one-time
+      // migration can include both the old cloud records and this browser's local backup.
+      await Promise.race([legacyReady,new Promise(resolve=>setTimeout(resolve,8000))]);
+      const legacy=legacyProgressFor(profile.username);
+      for(const [badgeKey,entry] of Object.entries(legacy)){
+        if(!progress[badgeKey]){progress[badgeKey]=entry;migrated++}
+      }
+    }
+    const newProfile={
+      ...previous,
+      firebaseUid:S.profileUid,
+      linkedRoblox:{id:String(profile.id),username:profile.username,displayName:profile.displayName,linkToken:data.linkToken,linkedAt:data.linkedAt},
+      progress,
+      legacyMigration:previous.legacyMigration?.completedAt?previous.legacyMigration:{completedAt:new Date().toISOString(),importedCount:migrated,fromUsername:profile.username},
+    };
+    await window.fbSaveUserProfile(newProfile);
+    await publishMyPublicProfile(newProfile);
+    S.profileData=newProfile;S.myProgress=progress;pendingRobloxChallenge=null;
+    $("#robloxChallenge").style.display="none";
+    updateAccountUI(window.UHBL_FIREBASE_USER,newProfile);render();
+    robloxStatus(`Ownership verified! @${profile.username} is now permanently bound to this UHBL profile for syncing. Imported ${migrated} matching legacy progress records; they remain marked as legacy until Roblox confirms them.`);
+  }catch(error){robloxStatus(`Verification failed: ${error.message}`)}
+  finally{button.disabled=false;button.textContent="Verify ownership"}
+}
+function inventoryBadgeId(item){
+  const value=item?.badgeDetails?.badgeId??item?.badgeId??item?.badge?.badgeId??item?.itemDetails?.badgeDetails?.badgeId??item?.id;
+  return value==null?"":String(value);
+}
+function inventoryAwardDate(item){
+  const raw=item?.addTime??item?.addedAt??item?.awardedAt??item?.badgeDetails?.addTime??null;
+  if(!raw)return null;const date=new Date(raw);return Number.isNaN(date.getTime())?null:date.toISOString().slice(0,10);
+}
+async function publishMyPublicProfile(profile){
+  if(!S.profileUid||!profile?.linkedRoblox)return;
+  const progress=profile.progress||{};const entries=Object.entries(progress);
+  const data={
+    uid:S.profileUid,
+    robloxUserId:String(profile.linkedRoblox.id),
+    robloxUsername:profile.linkedRoblox.username,
+    displayName:profile.linkedRoblox.displayName||profile.linkedRoblox.username,
+    ownedCount:entries.length,
+    verifiedOwnedCount:entries.filter(([,v])=>v&&v.verified===true).length,
+    legacyCount:entries.filter(([,v])=>v&&v.source==="legacy"&&!v.verified).length,
+    earnedBadgeKeys:entries.map(([k])=>k),
+    verifiedBadgeKeys:entries.filter(([,v])=>v&&v.verified===true).map(([k])=>k),
+    updatedAt:Date.now(),
+  };
+  await window.fbSavePublicProfile(data);
+}
+async function syncRobloxBadges(){
+  const profile=S.profileData,link=profile?.linkedRoblox;
+  if(!S.profileUid){robloxStatus("Sign in to your UHBL profile first.");return}
+  if(!link?.linkToken){robloxStatus("Link and verify your own Roblox account first.");return}
+  const button=$("#robloxSync");button.disabled=true;button.textContent="Syncing…";
+  try{
+    // No Roblox userId is sent by the browser. The Worker derives it from a signed
+    // link token bound to this Firebase UID and rejects tokens from other accounts.
+    const data=await workerPost("/roblox/inventory",{linkToken:link.linkToken});
+    const items=Array.isArray(data.inventoryItems)?data.inventoryItems:[];
+    const owned=new Map();
+    for(const item of items){const id=inventoryBadgeId(item);if(/^\d+$/.test(id)&&!owned.has(id))owned.set(id,inventoryAwardDate(item))}
+    const progress={...(profile.progress||{})};let matched=0,added=0,confirmed=0;
+    for(const badge of S.badges){
+      const id=String(badge.id||"");if(!id||!owned.has(id))continue;
+      matched++;confirmed++;
+      const previous=progress[bk(badge)];
+      const awardDate=owned.get(id)||previous?.earnedAt||null;
+      if(!previous||previous.verified!==true)added++;
+      progress[bk(badge)]={badgeId:id,earnedAt:awardDate,source:"roblox-inventory",verified:true};
+    }
+    const next={...profile,progress,lastInventorySync:new Date().toISOString(),lastInventoryCount:items.length};
+    await window.fbSaveUserProfile(next);await publishMyPublicProfile(next);
+    S.profileData=next;S.myProgress=progress;render();
+    robloxStatus(`Sync complete for your linked account @${link.username}. Roblox returned ${items.length} owned badges; ${matched} matched tracked UHBL badges; ${added} new or newly verified personal records.${data.truncated?" The API page limit was reached, so this result may be incomplete.":""} Existing community victors were not changed.`);
+  }catch(error){robloxStatus(`Badge sync failed: ${error.message}`)}
+  finally{button.disabled=!S.profileData?.linkedRoblox?.linkToken;button.textContent="Sync my badges"}
+}
+$("#accountLogin").addEventListener("click",async()=>{try{await window.fbProfileSignIn()}catch(e){accountStatus(`Sign-in failed: ${e.message}`)}});
+$("#accountLogout").addEventListener("click",async()=>{try{await window.fbProfileSignOut()}catch(e){accountStatus(`Sign-out failed: ${e.message}`)}});
+$("#robloxLinkStart").addEventListener("click",startRobloxLink);
+$("#robloxVerifyLink").addEventListener("click",verifyRobloxLink);
+$("#robloxSync").addEventListener("click",syncRobloxBadges);
+$("#copyRobloxChallenge").addEventListener("click",()=>{const code=$("#robloxChallengeCode").textContent;if(code)navigator.clipboard?.writeText(code).then(()=>robloxStatus("Verification code copied."),()=>robloxStatus("Copy failed; select the code and copy it manually."))});
+window.updateUHBLProfileUI=updateAccountUI;
 // ---- background ----
 const cv=$("#bg"),cx=cv.getContext("2d");let W,H,P=[];
 function size(){W=cv.width=innerWidth;H=cv.height=innerHeight;P=Array.from({length:Math.min(70,W/18|0)},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,vx:(Math.random()-.5)*.25,vy:-Math.random()*.35-.05}))}
@@ -641,13 +881,33 @@ frame();render();loadIcons();
 const C=window.FB_CFG;
 if(C){
   const B="https://www.gstatic.com/firebasejs/10.12.2/";
-  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc},{getAuth,GoogleAuthProvider,signInWithPopup,signOut}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
-  const app=initializeApp(C),db=getFirestore(app),au=getAuth(app),ref=doc(db,"uhbl","state");
+  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,getDoc,collection},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
+  const app=initializeApp(C),db=getFirestore(app),au=getAuth(app),legacyRef=doc(db,"uhbl","state");
+  const userRef=uid=>doc(db,"users",uid);
+  const publicRef=uid=>doc(db,"publicProfiles",uid);
   window.LIVE=true;
-  window.fbSave=r=>{if(window.ADMIN_UID&&au.currentUser&&au.currentUser.uid===window.ADMIN_UID)setDoc(ref,{badges:r,updated:Date.now()}).catch(e=>alert("Save failed: "+e.message))};
-  window.fbLogin=async()=>{try{const r=await signInWithPopup(au,new GoogleAuthProvider());if(!window.ADMIN_UID){document.querySelector("#amsg").textContent="Setup: your admin UID is "+r.user.uid+" . Put it in ADMIN_UID and in the Firestore rules.";return false}return r.user.uid===window.ADMIN_UID}catch(e){return false}};
-  window.fbLogout=()=>signOut(au);
-  onSnapshot(ref,s=>window.applyRemote(s.exists()?s.data().badges||{}:{}));
+  window.fbSave=r=>{if(window.ADMIN_UID&&au.currentUser&&au.currentUser.uid===window.ADMIN_UID)setDoc(legacyRef,{badges:r,updated:Date.now()},{merge:true}).catch(e=>alert("Community save failed: "+e.message))};
+  window.fbProfileSignIn=async()=>{const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});const result=await signInWithPopup(au,provider);return result.user};
+  window.fbProfileSignOut=()=>signOut(au);
+  window.fbLogin=async()=>{try{if(au.currentUser&&au.currentUser.uid===window.ADMIN_UID)return true;const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});const r=await signInWithPopup(au,provider);return r.user.uid===window.ADMIN_UID}catch(e){console.error(e);return false}};
+  window.fbGetIdToken=async()=>{if(!au.currentUser)throw new Error("Sign in to UHBL first.");return au.currentUser.getIdToken(true)};
+  window.fbLoadUserProfile=async()=>{if(!au.currentUser)throw new Error("Not signed in.");const snap=await getDoc(userRef(au.currentUser.uid));return snap.exists()?snap.data():{}};
+  window.fbSaveUserProfile=async data=>{if(!au.currentUser||!data||data.firebaseUid!==au.currentUser.uid)throw new Error("You can only save your own UHBL profile.");await setDoc(userRef(au.currentUser.uid),{...data,updatedAt:Date.now()},{merge:true})};
+  window.fbSavePublicProfile=async data=>{if(!au.currentUser||!data||data.uid!==au.currentUser.uid)throw new Error("You can only publish your own player profile.");await setDoc(publicRef(au.currentUser.uid),{...data,updatedAt:Date.now()},{merge:true})};
+  onSnapshot(legacyRef,s=>window.applyRemote(s.exists()?s.data().badges||{}:{}),e=>{console.error("Community state listener:",e);window.applyRemote({})});
+  onSnapshot(collection(db,"publicProfiles"),snap=>{const S=window.UHBL_APP_STATE;S.publicProfiles=snap.docs.map(d=>({uid:d.id,...d.data()}));if(S.tab==="pr")render();},e=>console.error("Public profiles listener:",e));
+  onAuthStateChanged(au,async user=>{
+    const S=window.UHBL_APP_STATE;
+    S.profileUid=user?user.uid:null;S.profileData=null;S.myProgress={};
+    if(!user){S.admin=false;const adminButton=document.querySelector("#adm");if(adminButton){adminButton.textContent="Admin: Off";adminButton.classList.remove("on")}document.querySelector("#apanel")?.classList.remove("show")}
+    if(user){
+      try{const snap=await getDoc(userRef(user.uid));S.profileData=snap.exists()?snap.data():{firebaseUid:user.uid,progress:{}};S.myProgress=S.profileData.progress||{};}
+      catch(e){console.error("Profile load failed:",e);S.profileData={firebaseUid:user.uid,progress:{}}}
+    }
+    if(window.updateUHBLProfileUI)window.updateUHBLProfileUI(user,S.profileData);
+    if(S.tab==="pr"&&S.selectedProfileUid===user?.uid)S.selectedProfileUid=null;
+    render();
+  });
 }
 </script>
 </body>
