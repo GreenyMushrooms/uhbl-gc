@@ -1123,13 +1123,15 @@ async function syncRobloxBadges(){
     // quotas are shared across keys owned by the same Roblox user/group, so
     // pace calls and honor Retry-After / x-ratelimit-reset when Roblox returns 429.
     const allItems=[];
+    const trackedBadgeIds=[...new Set(S.badges.map(b=>String(b.id||"").trim()).filter(id=>/^\d{1,20}$/.test(id)))].sort();
+    if(!trackedBadgeIds.length)throw new Error("No tracked Roblox badge IDs are configured yet.");
     const seenCursors=new Set();
     let cursor=null,totalPages=0,batches=0,lastBatch=null,rateLimitRetries=0;
     const MAX_TOTAL_PAGES=500;
     const MAX_RATE_LIMIT_RETRIES=7;
     const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     while(true){
-      const requestBody={linkToken:link.linkToken};
+      const requestBody={linkToken:link.linkToken,trackedBadgeIds};
       if(cursor)requestBody.continuationToken=cursor;
       let batch=null,attempt=0;
       while(!batch){
@@ -1150,7 +1152,7 @@ async function syncRobloxBadges(){
       allItems.push(...batchItems);
       totalPages+=Number(batch.pagesFetched||0);
       batches++;
-      robloxStatus(`Syncing @${link.username}: received ${allItems.length} badge items across ${totalPages} inventory pages (${batches} requests${rateLimitRetries?`, ${rateLimitRetries} rate-limit retries`:""})…`);
+      robloxStatus(`Checking @${link.username}: Roblox has checked ${trackedBadgeIds.length} UHBL badge IDs; ${allItems.length} owned matches found across ${totalPages} inventory pages (${batches} requests${rateLimitRetries?`, ${rateLimitRetries} rate-limit retries`:""})…`);
 
       const nextCursor=batch.nextCursorToken||null;
       if(!nextCursor)break;
@@ -1162,8 +1164,9 @@ async function syncRobloxBadges(){
       if(totalPages>=MAX_TOTAL_PAGES){
         throw new Error(`Safety limit reached after ${totalPages} inventory pages. No progress was changed; please contact the tracker administrator to review this account's inventory size.`);
       }
-      // Keep a conservative pace even when Roblox hasn't started returning 429.
-      await wait(2500);
+      // Only tracked badge IDs are queried, so there are usually very few pages.
+      // Keep a modest gap; Roblox's Retry-After still takes precedence on 429.
+      await wait(1000);
     }
 
     const items=allItems;
@@ -1176,11 +1179,10 @@ async function syncRobloxBadges(){
       else unparsed++;
     }
     const trackedWithIds=S.badges.filter(b=>/^\d+$/.test(String(b.id||"")));
-    if(items.length===0){
-      const err="Roblox returned zero badge inventory items. Check that your API key has User Inventory Read access and that Roblox allows your inventory to be viewed. No progress was changed.";
-      throw new Error(err);
-    }
-    if(owned.size===0){
+    // An empty result is valid for a targeted badgeIds query: it means Roblox
+    // found no owned badges among UHBL's current tracked IDs. Do not treat this
+    // as an API failure and do not erase any older progress records.
+    if(owned.size===0 && items.length>0){
       const first=items[0]||{};
       const keys=Object.keys(first).join(", ")||"(no fields)";
       const nested=first.badgeDetails&&typeof first.badgeDetails==="object"?Object.keys(first.badgeDetails).join(", "):"none";
@@ -1207,7 +1209,7 @@ async function syncRobloxBadges(){
       const examples=[...owned.keys()].slice(0,8).join(", ");
       robloxStatus(`Roblox returned ${items.length} badge items across ${totalPages} inventory pages and UHBL read ${owned.size} badge IDs, but none matched the ${trackedWithIds.length} tracked badges that currently have IDs. No global victors were added. Example owned badge IDs: ${examples||"none"}. This usually means one or more UHBL badge IDs need correcting.`);
     }else{
-      robloxStatus(`Sync complete for @${link.username}: Roblox returned ${items.length} badge inventory items across ${totalPages} pages (${batches} Worker requests); UHBL read ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified${rateLimitRetries?` after ${rateLimitRetries} rate-limit retries`:""}. Your global victor list has been updated for everyone.${unparsed?` ${unparsed} inventory item(s) had no readable badge ID.`:""}`);
+      robloxStatus(`Sync complete for @${link.username}: Roblox checked ${trackedBadgeIds.length} tracked badge IDs and returned ${items.length} owned matches across ${totalPages} pages (${batches} Worker requests); UHBL parsed ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified${rateLimitRetries?` after ${rateLimitRetries} rate-limit retries`:""}. Your global victor list has been updated for everyone.${unparsed?` ${unparsed} item(s) had no readable badge ID.`:""}`);
     }
   }catch(error){
     console.error("UHBL badge sync failed",error);
