@@ -972,8 +972,19 @@ async function workerPost(path,body){
     headers:{"Authorization":`Bearer ${idToken}`,"Content-Type":"application/json"},
     body:JSON.stringify(body||{})
   });
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(`${data.error||"Request failed"}${data.hint?" · "+data.hint:""} (HTTP ${response.status})`);
+  const rawText=await response.text();
+  let data={};
+  try{data=rawText?JSON.parse(rawText):{}}catch{data={raw:rawText.slice(0,1200)}}
+  if(!response.ok){
+    const details=[];
+    if(data.stage)details.push(`stage: ${data.stage}`);
+    if(data.message)details.push(`detail: ${String(data.message).slice(0,700)}`);
+    if(data.hint)details.push(data.hint);
+    if(data.robloxStatus)details.push(`Roblox status: ${data.robloxStatus}`);
+    if(data.details)details.push(`response: ${JSON.stringify(data.details).slice(0,700)}`);
+    if(data.raw)details.push(`response: ${String(data.raw).slice(0,700)}`);
+    throw new Error(`${data.error||"Request failed"} (HTTP ${response.status})${details.length?" · "+details.join(" · "):""}`);
+  }
   return data;
 }
 async function startRobloxLink(){
@@ -1148,7 +1159,10 @@ async function syncRobloxBadges(){
     }else{
       robloxStatus(`Sync complete for @${link.username}: Roblox returned ${items.length} badge inventory items; UHBL read ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified. Your global victor list has been updated for everyone.${unparsed?` ${unparsed} inventory item(s) had no readable badge ID.`:""}${data.truncated?" The API page limit was reached, so this result may be incomplete.":""}`);
     }
-  }catch(error){robloxStatus(`Badge sync failed: ${error.message}`)}
+  }catch(error){
+    console.error("UHBL badge sync failed",error);
+    robloxStatus(`Badge sync failed: ${error.message}. No community progress was changed unless the message explicitly says your personal sync was saved.`);
+  }
   finally{button.disabled=!S.profileData?.linkedRoblox?.linkToken;button.textContent="Sync my badges"}
 }
 function authEmail(){return $("#authEmail").value.trim()}
