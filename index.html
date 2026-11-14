@@ -1047,8 +1047,27 @@ async function verifyRobloxLink(){
   finally{button.disabled=false;button.textContent="Verify ownership"}
 }
 function inventoryBadgeId(item){
-  const value=item?.badgeDetails?.badgeId??item?.badgeId??item?.badge?.badgeId??item?.itemDetails?.badgeDetails?.badgeId??item?.id;
-  return value==null?"":String(value);
+  // Roblox Open Cloud's documented badge item shape is badgeDetails.badgeId.
+  // Keep fallbacks for minor response-shape variations, but only accept numeric IDs.
+  const candidates=[
+    item?.badgeDetails?.badgeId,
+    item?.badgeDetails?.id,
+    item?.badgeId,
+    item?.badge?.badgeId,
+    item?.badge?.id,
+    item?.itemDetails?.badgeDetails?.badgeId,
+    item?.itemDetails?.badgeDetails?.id,
+    item?.id
+  ];
+  for(const value of candidates){
+    if(value==null)continue;
+    const id=String(value).trim();
+    if(/^\d{1,24}$/.test(id))return id;
+  }
+  // Some inventory resources expose a path containing the badge ID.
+  const path=String(item?.path||"");
+  const pathMatch=path.match(/(?:BADGE_ID=|badges?\/)(\d{1,24})(?:$|\/)/i);
+  return pathMatch?pathMatch[1]:"";
 }
 function inventoryAwardDate(item){
   const raw=item?.addTime??item?.addedAt??item?.awardedAt??item?.badgeDetails?.addTime??null;
@@ -1082,25 +1101,53 @@ async function syncRobloxBadges(){
   if(!link?.linkToken){robloxStatus("Link and verify your own Roblox account first.");return}
   const button=$("#robloxSync");button.disabled=true;button.textContent="Syncing…";
   try{
-    // No Roblox userId is sent by the browser. The Worker derives it from a signed
-    // link token bound to this Firebase UID and rejects tokens from other accounts.
+    // The Worker derives the Roblox user ID from the Firebase-UID-bound link token.
     const data=await workerPost("/roblox/inventory",{linkToken:link.linkToken});
     const items=Array.isArray(data.inventoryItems)?data.inventoryItems:[];
     const owned=new Map();
-    for(const item of items){const id=inventoryBadgeId(item);if(/^\d+$/.test(id)&&!owned.has(id))owned.set(id,inventoryAwardDate(item))}
-    const progress={...(profile.progress||{})};let matched=0,added=0,confirmed=0;
+    let unparsed=0;
+    for(const item of items){
+      const id=inventoryBadgeId(item);
+      if(/^\d+$/.test(id)){if(!owned.has(id))owned.set(id,inventoryAwardDate(item));}
+      else unparsed++;
+    }
+    const trackedWithIds=S.badges.filter(b=>/^\d+$/.test(String(b.id||"")));
+    if(items.length===0){
+      const status=Number.isFinite(Number(data.count))?Number(data.count):0;
+      const err=status===0
+        ?"Roblox returned zero badge inventory items. Check that your API key has User Inventory Read access and that Roblox allows your inventory to be viewed. No progress was changed."
+        :"The inventory response was empty even though the Worker reported a non-zero count. No progress was changed.";
+      throw new Error(err);
+    }
+    if(owned.size===0){
+      const first=items[0]||{};
+      const keys=Object.keys(first).join(", ")||"(no fields)";
+      const nested=first.badgeDetails&&typeof first.badgeDetails==="object"?Object.keys(first.badgeDetails).join(", "):"none";
+      throw new Error(`Roblox returned ${items.length} inventory items, but UHBL could not read any badge IDs. First item fields: ${keys}. badgeDetails fields: ${nested}. No progress was changed.`);
+    }
+    const progress={...(profile.progress||{})};let matched=0,added=0;
     for(const badge of S.badges){
       const id=String(badge.id||"");if(!id||!owned.has(id))continue;
-      matched++;confirmed++;
+      matched++;
       const previous=progress[bk(badge)];
       const awardDate=owned.get(id)||previous?.earnedAt||null;
       if(!previous||previous.verified!==true)added++;
       progress[bk(badge)]={badgeId:id,earnedAt:awardDate,source:"roblox-inventory",verified:true};
     }
-    const next={...profile,progress,lastInventorySync:new Date().toISOString(),lastInventoryCount:items.length};
-    await window.fbSaveUserProfile(next);await publishMyPublicProfile(next);
+    const next={...profile,progress,lastInventorySync:new Date().toISOString(),lastInventoryCount:items.length,lastInventoryParsedBadgeCount:owned.size,lastInventoryMatchedCount:matched};
+    await window.fbSaveUserProfile(next);
+    try{
+      await publishMyPublicProfile(next);
+    }catch(publicError){
+      throw new Error(`Your personal sync was saved (${matched} tracked badges matched), but publishing the global victor/profile update failed: ${publicError.message}. Deploy the updated Firestore rules included with this fix.`);
+    }
     S.profileData=next;S.myProgress=progress;render();
-    robloxStatus(`Sync complete for @${link.username}. Roblox returned ${items.length} owned badges; ${matched} matched tracked UHBL badges; ${added} were newly verified for your profile. Your username is now included automatically in the global victor lists for those badges.${data.truncated?" The API page limit was reached, so this result may be incomplete.":""}`);
+    if(matched===0){
+      const examples=[...owned.keys()].slice(0,8).join(", ");
+      robloxStatus(`Roblox returned ${items.length} badge items and UHBL read ${owned.size} badge IDs, but none matched the ${trackedWithIds.length} tracked badges that currently have IDs. Your profile sync ran, but no global victors were added. Example owned badge IDs: ${examples||"none"}. This usually means one or more UHBL badge IDs need correcting.`);
+    }else{
+      robloxStatus(`Sync complete for @${link.username}: Roblox returned ${items.length} badge inventory items; UHBL read ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified. Your global victor list has been updated for everyone.${unparsed?` ${unparsed} inventory item(s) had no readable badge ID.`:""}${data.truncated?" The API page limit was reached, so this result may be incomplete.":""}`);
+    }
   }catch(error){robloxStatus(`Badge sync failed: ${error.message}`)}
   finally{button.disabled=!S.profileData?.linkedRoblox?.linkToken;button.textContent="Sync my badges"}
 }
