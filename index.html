@@ -83,7 +83,7 @@ button.danger:hover{background:#ff5555;color:#000;border-color:#ff5555}
 
 /* Account center modal */
 body.account-modal-open{overflow:hidden}
-.account-modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:22px}
+.account-modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:22px;font-size:16px}
 .account-modal.open{display:flex}
 .account-modal-backdrop{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:rgba(0,0,0,.78);backdrop-filter:blur(7px);cursor:default}
 .account-dialog{position:relative;z-index:1;width:min(920px,100%);max-height:min(760px,calc(100dvh - 44px));overflow:hidden;background:linear-gradient(145deg,#0b100c,#050706 58%,#080b0d);border:1px solid #354336;box-shadow:0 28px 90px rgba(0,0,0,.75),0 0 36px rgba(0,229,255,.055);display:flex;flex-direction:column}
@@ -136,8 +136,10 @@ body.account-modal-open{overflow:hidden}
 .auth-divider:before,.auth-divider:after{content:"";height:1px;background:#293029;flex:1}
 .roblox-connect{width:100%;border:1px solid #2b382d;padding:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:4px;background:linear-gradient(145deg,#0c120d,#080b09)}
 .roblox-connect .field{display:flex;flex-direction:column;gap:6px;min-width:220px;flex:1}
-.roblox-connect input{width:100%;height:40px;min-width:0;background:#030403;border-color:#303a31;pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;cursor:text;position:relative;z-index:2}
-.roblox-connect .field{position:relative;z-index:2}
+.roblox-connect input{display:block;width:100%;height:40px;min-width:0;background:#030403;border-color:#303a31;color:#fff;font:14px/1.3 "Segoe UI",Roboto,Helvetica,Arial,sans-serif;caret-color:var(--acc);pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;cursor:text;position:relative;z-index:2;opacity:1}
+.roblox-connect .field{position:relative;z-index:2;pointer-events:auto}
+.account-dialog input,.account-dialog select{font-size:14px;pointer-events:auto}
+.account-dialog input:focus{outline:1px solid var(--acc);outline-offset:1px}
 .roblox-connect button{height:40px}
 .roblox-profile{width:100%;font-size:12px;color:#aab4aa;white-space:pre-wrap;line-height:1.55;padding:11px;border:1px solid #202a21;background:#050805}
 .roblox-profile strong{color:var(--tx)}
@@ -288,10 +290,10 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
         </section>
         <section class="account-page" id="accountRobloxPage" data-account-page="roblox">
           <h2 class="account-page-title">Roblox account</h2>
-          <p class="account-page-subtitle">Verify ownership of your Roblox account. UHBL will only sync badges from the account linked to this profile.</p>
+          <p class="account-page-subtitle">Enter your numeric Roblox user ID. UHBL will verify that you control that Roblox profile before syncing its badges.</p>
           <div class="roblox-connect">
             <div class="lab" style="width:100%">Link your own Roblox account</div>
-            <label class="field"><span class="lab">Roblox username</span><input id="robloxUsername" type="text" placeholder="Enter your Roblox username" maxlength="20" autocomplete="username" aria-label="Roblox username"></label>
+            <label class="field"><span class="lab">Roblox user ID</span><input id="robloxUserId" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Enter your Roblox user ID (numbers only)" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Roblox user ID"></label>
             <button id="robloxLinkStart" type="button" disabled>Start ownership verification</button>
             <div id="robloxChallenge" style="display:none;width:100%;flex-direction:column;gap:8px">
               <div class="profile-help">Temporarily add this exact code to the About/description field on the Roblox account, save it, then return here and verify. Remove the code after linking.</div>
@@ -300,7 +302,7 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
             </div>
             <div class="profile-actions"><button id="robloxSync" type="button" disabled>Sync my badges</button></div>
             <div class="profile-help">A successful sync automatically adds your Roblox username to every matching badge in the global community tracker. No one needs to enter victors manually. The same completed badges and victor list are visible whether you are logged in or not.</div>
-            <div class="roblox-profile" id="robloxProfileStatus" aria-live="polite">Sign in first, then prove ownership of your Roblox account. Each UHBL profile can only sync its own verified linked Roblox account.</div>
+            <div class="roblox-profile" id="robloxProfileStatus" aria-live="polite">Sign in, enter your Roblox user ID, and prove ownership. Each UHBL profile can only sync its own verified linked Roblox account.</div>
           </div>
         </section>
         <section class="account-page" id="accountSettingsPage" data-account-page="settings">
@@ -898,7 +900,7 @@ function openAccountModal(section="overview",authMode=null){
 function closeAccountModal(){const modal=$("#accountModal");if(!modal)return;modal.classList.remove("open");modal.setAttribute("aria-hidden","true");document.body.classList.remove("account-modal-open")}
 function closeAccountDropdown(){const wrap=$("#accountWrap"),trigger=$("#accountTrigger");wrap?.classList.remove("open");trigger?.setAttribute("aria-expanded","false")}
 function updateAccountUI(user,profile){
-  const authBox=$("#authBox"),signedIn=$("#signedInActions"),start=$("#robloxLinkStart"),sync=$("#robloxSync"),name=$("#robloxUsername"),linkGoogle=$("#linkGoogle"),resend=$("#resendVerification");
+  const authBox=$("#authBox"),signedIn=$("#signedInActions"),start=$("#robloxLinkStart"),sync=$("#robloxSync"),name=$("#robloxUserId"),linkGoogle=$("#linkGoogle"),resend=$("#resendVerification");
   const guestMenu=$("#accountGuestMenu"),userMenu=$("#accountUserMenu"),triggerLabel=$("#accountTriggerLabel"),avatar=$("#accountAvatar"),email=user?.email||"";
   const providers=user?.providerData?.map(p=>p.providerId)||[];
   const isSignedIn=!!user;
@@ -922,10 +924,10 @@ function updateAccountUI(user,profile){
   if(linkGoogle)linkGoogle.style.display=isSignedIn&&!providers.includes("google.com")?"inline-block":"none";
   if(resend)resend.style.display=isSignedIn&&providers.includes("password")&&!user.emailVerified?"inline-block":"none";
   if(name){
-    const linked=!!profile?.linkedRoblox?.username;
+    const linked=!!profile?.linkedRoblox?.id;
     name.disabled=linked;
     name.readOnly=linked;
-    if(linked)name.value=profile.linkedRoblox.username;
+    if(linked)name.value=String(profile.linkedRoblox.id);
   }
   const progress=profile?.progress||{};const entries=Object.values(progress);
   setText("#accountBadgeStat",String(entries.length));
@@ -939,7 +941,7 @@ function updateAccountUI(user,profile){
   }else{
     setText("#accountRobloxSummary","Roblox account not linked");
     setText("#accountRobloxDetails","Link your Roblox account to verify badge ownership automatically.");
-    robloxStatus(isSignedIn?"No Roblox account linked yet. Start ownership verification to connect your own account.":"Sign in first, then prove ownership of your Roblox account.");
+    robloxStatus(isSignedIn?"No Roblox account linked yet. Enter your Roblox user ID to start ownership verification.":"Sign in first, then prove ownership of your Roblox account.");
     if(start)start.textContent="Start ownership verification";
   }
   accountStatus(isSignedIn?`Signed in as ${displayName}. Your personal progress is private to this Firebase account.`:"Create an account with email/password, or continue with Google. Both methods create a private UHBL profile.");
@@ -975,17 +977,17 @@ async function workerPost(path,body){
   return data;
 }
 async function startRobloxLink(){
-  const user=S.profileUid,username=$("#robloxUsername").value.trim();
+  const user=S.profileUid,userId=$("#robloxUserId").value.trim();
   if(!user){robloxStatus("Sign in to UHBL first.");return}
   if(linkedProfile()){robloxStatus("A Roblox account is already linked to this UHBL profile. Unlinking/replacing accounts is intentionally disabled in this first secure release.");return}
-  if(!username){robloxStatus("Enter your Roblox username first.");return}
+  if(!/^\d{1,20}$/.test(userId)){robloxStatus("Enter a numeric Roblox user ID (numbers only).");return}
   const button=$("#robloxLinkStart");button.disabled=true;button.textContent="Creating challenge…";
   try{
-    const data=await workerPost("/roblox/link/start",{username});
+    const data=await workerPost("/roblox/link/start",{userId});
     pendingRobloxChallenge=data.challengeToken;
     $("#robloxChallengeCode").textContent=data.code;
     $("#robloxChallenge").style.display="flex";
-    robloxStatus(`Found @${data.profile.username}. Add the exact code below to that Roblox profile's About/description, save it, then click Verify ownership. The code expires in 15 minutes.`);
+    robloxStatus(`Found @${data.profile.username} (Roblox ID ${data.profile.id}). Add the exact code below to that Roblox profile's About/description, save it, then click Verify ownership. The code expires in 15 minutes.`);
   }catch(error){robloxStatus(`Could not start account linking: ${error.message}`)}
   finally{button.disabled=!!linkedProfile()||!S.profileUid;button.textContent=linkedProfile()?"Account linked":"Start ownership verification"}
 }
@@ -1162,10 +1164,14 @@ $("#passwordReset").addEventListener("click",async()=>{
 $("#linkGoogle").addEventListener("click",async()=>{try{await window.fbLinkGoogle();accountStatus("Google has been linked to this UHBL account. You can now sign in either way.")}catch(e){showAuthError("Could not link Google",e)}});
 $("#resendVerification").addEventListener("click",async()=>{try{await window.fbResendVerification();accountStatus("Verification email sent again. Check your inbox.")}catch(e){showAuthError("Could not resend verification email",e)}});
 $("#accountLogout").addEventListener("click",async()=>{try{await window.fbProfileSignOut()}catch(e){accountStatus(`Sign-out failed: ${e.message}`)}});
-$("#robloxUsername").addEventListener("input",()=>{
+$("#robloxUserId").addEventListener("input",()=>{
+  const input=$("#robloxUserId");
+  // Keep the field numeric even when users paste a Roblox profile URL by accident.
+  const clean=input.value.replace(/\D/g,"").slice(0,20);
+  if(input.value!==clean)input.value=clean;
   const linked=!!linkedProfile();
   const button=$("#robloxLinkStart");
-  if(button)button.disabled=!S.profileUid||linked||!$("#robloxUsername").value.trim();
+  if(button)button.disabled=!S.profileUid||linked||!/^\d{1,20}$/.test(clean);
 });
 $("#robloxLinkStart").addEventListener("click",startRobloxLink);
 $("#robloxVerifyLink").addEventListener("click",verifyRobloxLink);
