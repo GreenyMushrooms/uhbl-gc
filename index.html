@@ -296,7 +296,7 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
             <label class="field"><span class="lab">Roblox user ID</span><input id="robloxUserId" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Enter your Roblox user ID (numbers only)" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Roblox user ID"></label>
             <button id="robloxLinkStart" type="button" disabled>Start ownership verification</button>
             <div id="robloxChallenge" style="display:none;width:100%;flex-direction:column;gap:8px">
-              <div class="profile-help">Temporarily add this exact code to the About/description field on the Roblox account, save it, then return here and verify. Remove the code after linking.</div>
+              <div class="profile-help">Temporarily add these six ordinary words to the About/description field on your Roblox account, save it, then return here and click Verify ownership. After linking, remove the words. If Roblox turns them into #####, click Start ownership verification again to generate a different phrase.</div>
               <div class="challenge-code" id="robloxChallengeCode"></div>
               <div class="profile-actions"><button id="copyRobloxChallenge" type="button">Copy code</button><button id="robloxVerifyLink" type="button">Verify ownership</button></div>
             </div>
@@ -987,7 +987,7 @@ async function startRobloxLink(){
     pendingRobloxChallenge=data.challengeToken;
     $("#robloxChallengeCode").textContent=data.code;
     $("#robloxChallenge").style.display="flex";
-    robloxStatus(`Found @${data.profile.username} (Roblox ID ${data.profile.id}). Add the exact code below to that Roblox profile's About/description, save it, then click Verify ownership. The code expires in 15 minutes.`);
+    robloxStatus(`Found @${data.profile.username} (Roblox ID ${data.profile.id}). Add these six words to that Roblox profile's About/description, save it, then click Verify ownership. The phrase expires in 15 minutes. If Roblox filters it, start again for a fresh phrase.`);
   }catch(error){robloxStatus(`Could not start account linking: ${error.message}`)}
   finally{button.disabled=!!linkedProfile()||!S.profileUid;button.textContent=linkedProfile()?"Account linked":"Start ownership verification"}
 }
@@ -1176,7 +1176,7 @@ $("#robloxUserId").addEventListener("input",()=>{
 $("#robloxLinkStart").addEventListener("click",startRobloxLink);
 $("#robloxVerifyLink").addEventListener("click",verifyRobloxLink);
 $("#robloxSync").addEventListener("click",syncRobloxBadges);
-$("#copyRobloxChallenge").addEventListener("click",()=>{const code=$("#robloxChallengeCode").textContent;if(code)navigator.clipboard?.writeText(code).then(()=>robloxStatus("Verification code copied."),()=>robloxStatus("Copy failed; select the code and copy it manually."))});
+$("#copyRobloxChallenge").addEventListener("click",()=>{const code=$("#robloxChallengeCode").textContent;if(code)navigator.clipboard?.writeText(code).then(()=>robloxStatus("Six-word verification phrase copied."),()=>robloxStatus("Copy failed; select the phrase and copy it manually."))});
 window.updateUHBLProfileUI=updateAccountUI;
 // ---- background ----
 const cv=$("#bg"),cx=cv.getContext("2d");let W,H,P=[];
