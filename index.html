@@ -205,7 +205,80 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
 .challenge-code{font:700 14px ui-monospace,monospace;letter-spacing:.06em;padding:12px;background:#111;border:1px dashed var(--acc);overflow-wrap:anywhere}
 .profile-help{font-size:12px;color:var(--mut);line-height:1.5}
 .profile-panel button:disabled{opacity:.45;cursor:not-allowed}
+
 @media(max-width:600px){.profile-actions{align-items:stretch}.profile-actions button{flex:1}}
+/* Advanced community player profiles */
+.profile-hub{display:flex;flex-direction:column;gap:18px}
+.profile-hub-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}
+.profile-hub-title{font-size:22px;font-weight:900;letter-spacing:.04em;margin:0}
+.profile-hub-subtitle{color:var(--mut);font-size:12px;margin-top:5px;line-height:1.5}
+.profile-subtabs{display:flex;gap:6px;flex-wrap:wrap}
+.profile-subtabs button.active{background:#fff;color:#000;border-color:#fff}
+.player-card{background:linear-gradient(145deg,#101710,#080b08);border:1px solid #29372b;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.player-card-top{display:flex;gap:12px;align-items:center;min-width:0}
+.player-avatar{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:none;background:#161e17;border:1px solid #354436}
+.player-avatar.large{width:104px;height:104px;border-radius:18px}
+.player-name{font-size:17px;font-weight:900;overflow-wrap:anywhere}
+.player-handle{font-size:12px;color:var(--mut);margin-top:3px}
+.player-progress{height:8px;background:#202820;border-radius:20px;overflow:hidden;border:1px solid #303a31}
+.player-progress>span{display:block;height:100%;background:linear-gradient(90deg,#39ff14,#00e5ff);border-radius:20px}
+.player-progress-label{display:flex;justify-content:space-between;gap:8px;color:var(--mut);font-size:11px}
+.player-mini-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.player-mini-stat{background:#080b08;border:1px solid #263027;padding:9px;min-width:0}
+.player-mini-stat strong{display:block;color:var(--ok);font-size:19px;font-weight:900}
+.player-mini-stat span{display:block;color:var(--mut);font-size:9px;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+.player-card-actions{display:flex;gap:7px;flex-wrap:wrap}
+.player-card-actions button{flex:1;min-width:100px}
+.player-profile-hero{border:1px solid #2b3b2d;background:radial-gradient(circle at 5% 0%,rgba(57,255,20,.09),transparent 45%),linear-gradient(145deg,#101710,#070a07);padding:20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.player-profile-identity{flex:1;min-width:190px}
+.player-profile-name{font-size:26px;line-height:1.1;font-weight:950;overflow-wrap:anywhere}
+.player-profile-handle{color:var(--mut);font-size:13px;margin-top:6px}
+.player-profile-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.profile-pill{font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border:1px solid #344235;color:#b9c7ba;background:#090e09}
+.profile-pill.verified{border-color:#315a32;color:#9cff8c}
+.player-profile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.profile-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px}
+.profile-stat-card{background:#0b100b;border:1px solid #2a352b;padding:13px;min-width:0}
+.profile-stat-card strong{display:block;color:var(--ok);font-size:25px;font-weight:950;line-height:1.1}
+.profile-stat-card span{display:block;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.09em;margin-top:7px}
+.profile-section{border:1px solid #29342b;background:rgba(8,12,8,.75);padding:16px}
+.profile-section h2{font-size:14px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 12px}
+.profile-section-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.profile-section-head h2{margin:0}
+.profile-tier-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}
+.profile-tier-item{background:#080b08;border:1px solid #273128;padding:10px}
+.profile-tier-item strong{font-size:17px;color:var(--gold);display:block}
+.profile-tier-item span{font-size:10px;color:var(--mut)}
+.profile-achievements{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:9px}
+.profile-achievement{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid #29342b;background:#090d09;min-width:0}
+.profile-achievement .top img,.profile-achievement .top svg{width:44px;height:44px;flex:none}
+.profile-achievement-info{min-width:0;flex:1}
+.profile-achievement-name{font-size:12px;font-weight:800;overflow-wrap:anywhere}
+.profile-achievement-game{font-size:10px;color:var(--mut);margin-top:3px;overflow-wrap:anywhere}
+.profile-achievement-tag{font-size:9px;color:#9dff8d;margin-top:5px;text-transform:uppercase;letter-spacing:.08em}
+.compare-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.compare-player-picker{display:flex;flex-direction:column;gap:6px;padding:13px;border:1px solid #2b372d;background:#0a0e0a;min-width:0}
+.compare-player-picker select{width:100%;min-width:0;height:42px}
+.compare-vs{display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:950;letter-spacing:.15em;padding:4px}
+.compare-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.compare-stat{background:#0a0e0a;border:1px solid #2b372d;padding:12px;text-align:center;min-width:0}
+.compare-stat strong{display:block;font-size:23px;color:var(--ok)}
+.compare-stat span{display:block;color:var(--mut);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.compare-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.compare-column{border:1px solid #2b372d;background:#090d09;padding:13px;min-width:0}
+.compare-column h3{font-size:13px;margin:0 0 10px;overflow-wrap:anywhere}
+.compare-list{display:flex;flex-direction:column;gap:6px}
+.compare-list-item{padding:8px;border:1px solid #222d23;background:#050805;font-size:11px;overflow-wrap:anywhere}
+.compare-list-item small{display:block;color:var(--mut);font-size:10px;margin-top:3px}
+.compare-empty{color:var(--mut);font-size:12px;padding:12px;border:1px dashed #344035;text-align:center}
+.profile-rank-line{color:var(--mut);font-size:11px;line-height:1.5}
+
+.profile-achievement-date{font-size:10px;color:#a8b6a9;margin-top:4px;line-height:1.35}
+.profile-achievement-date.unavailable{color:#778078}
+.profile-sort-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.profile-sort-tools label{font-size:10px;color:var(--mut);letter-spacing:.08em;text-transform:uppercase}
+.profile-sort-tools select{min-width:145px;height:34px;padding:5px 9px;font-size:11px}
+@media(max-width:650px){.player-mini-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.compare-picker,.compare-columns{grid-template-columns:1fr}.player-profile-hero{padding:15px}.player-profile-name{font-size:22px}.player-avatar.large{width:82px;height:82px}.compare-summary{grid-template-columns:1fr 1fr}.compare-stat:last-child{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -582,7 +655,7 @@ const bk=b=>b.game+"|"+b.name;
 const DEFAULT_TIERS={"Taxi Simulator: The Future Challenges|Conqueror's Avenue":5};
 const DEFAULT_IDS={"Super Bomb Survival|6.0 Hero":"2144689474","Project Lazarus: 💀 ZOMBIES 💀|Round 50":"2124694495","Five Nights at Roblox 2|Night 7 (7/20)":"2126858225","Dancing Line: The Rebirth|Wrath of the Squid: Perfection":"1568719541298137","CRAZY HORSE GAME 🐴|TRUE 100%":"1536445088648395","Isle of the Ether|ether's edge":"2138685484","A-P: The Perfect Run|A-P: Perfect Run Completed":"3700905532617612","Nocturner|Ira de Dis":"1305327722193590","Night Before the Blizzard|Extreme Difficulty":"3893244528443260","Simple Hiking: Hiking of The Soul|Formidable Mental Fortitude":"2152111386","A ROBLOX Quest: Elements of Robloxia|Tower Hero":"150267355","The Battle Bricks|CHAPTER V - TREE(3)":"1245678289047574","tower of ten floors challenge|You S+ Ranked in TRUE MODE!":"684202039520385","Urbis|Jack of All Trades":"466154086","Cyber Arena|TRUE LETHALITY":"106340722446560","Notoriety|True Criminal":"1873037302","Dogwatching 3|★ALL-STARS★":"2940797272570057","a dream youve had before|judgement":"2124779975","Super Golf!|Teamwork!":"2124906971","WEGA's Challenge: THE ETERNAL LAPPIN'|Death is imminent":"1538842330073085","Isolarium|Dreamer":"3770164287626733","The True RailGun Obby|Finish the HARDCORE Railgun Obby":"2263993068352971","Boss6:06|KEEP SMILING":"1861014210820882","Isle|The Replay":"2244810538289475","Gallery of Ordered Instances|The Lark o'er Ocean's Door":"3588353908481119","Find the Corns|Cornpletionist":"3375638599355244","Pressure|This Badge Really Sucks":"223335639160189","Derelict|Melisande, The Oracle":"3593693706451380","> home|One for you, One for me, One for the team.":"3115715820754562","Find The Binguses|???":"1855286832847764","Decloid Chaos: Overcharged|Strong Bridge":"3276036348278052","Speed Run Adventure 2|Completionist - Speed Run Adventure 2":"1933407445447860","ZIPLINE OBBY 2024|DEATHLESS WIN":"1543382810024990","[🗣️] GUESSER OBBY 💯|Bad research":"1334898911146783","Tropical Golf|Process of Rebirth":"836303990657498","Catalog Gear Place|Cosmoknight's Fish":"1540429005835940","Keep the Platform from Falling 2|Travelled From Dawn to Dusk":"2605843865953446","Pie Hiker's Reverie|Pie Liker":"3746604785699388","Arcane Odyssey|Slayer of Ancient Dragons":"4110403995262142","PM606 Exit Pizza|THANKS FOR PLAYING":"887060571526867","six hours of silence|survive":"3067882985271483","razor passage|Razor Passage":"2111598183706429","Existential Dreams|Night 7":"3301348354032804","MGDWare|You did this to Yourself":"2146154975","Cliffside Station|CEO of Cliffside":"3782980822709474","STAR GLITCHER ~ REVITALIZED|Ultrahell but No Death":"4197950691419578","UMG:Phobia|How?":"3942610581932803","Depth Spelunking|Madman":"2680529696956434","SpeedBLOX|First-Person Completionist":"1492233897112796","cybertzas bonanza V2|gasolina":"3548165143324481","Every Jump...|for good":"1880548678466302","I Hate You.|Casual Muncher":"2125616449","Virus Alert|“MYDOOM” Complete":"2432886942476190","Climbing Game|Angelic Assessment [Brutal] [Featured Map]":"459200780551038","Elite Buttering|elitemost buttering":"3310200555237584","Roblox Karts|Veteran Speedster":"2433249835799004","Find The Alalals|Scavenger Hunt":"546477782037136","FnF Multiverse|Dirty Tricks":"2840109288981399","Worlds Hardest Game|deathless win":"2127793818","CMYKrash [Modifiers]|HEXTreme Completion!":"2630373974235967","Run|The Perfect Run":"3897936924584901","Area 66|Back Again":"569230848494690","Dimension Lock|Dimension King":"2327322059508498","The Reactor [Maintenance]|Hell Shift":"2513165307143539","No Mercy: The Gameshow|I feel fear no longer":"662434445713938","The Crusher (Survival Obby)|Aced it All":"1803192828","Pressure Practice Place|Death Welcomes You Home":"1907083615682387","neon❖Knights|Without a Voice":"2145829581","Sound Space|BRRR Champion":"1295829428282824","1 Minute Until Global Catastrophe|Misery":"2091374870308730","Friday Night Partying|[PFC] BOOYAH!!!":"3512892274408927","whizzbang|2000 yard stare":"184469014994789","sun, moon, and star. to these i bid adieu|Knockin' on Heaven's Gate":"2127750606","Project Somnia|dreams of dystopia":"1816376946432764","Minus Elevation|Floor 100":"4010890666413972","OPERATION COYOTE|100":"1323638947673349","Paradigm-Shift Tower Defense|Commander One":"326843937406824","Escape Room|Winner Winner Chicken Dinner":"680213537338947","Beat Block Boulevard|Beat Block Boulevard":"146116990505669","This Game is Pain|No. Just... No.":"3632301819243552","Flood Escape 2 🌊|Luminance [Crazy+]":"331505911477562","World's Hardest Obby|World's HARDEST obby":"3280903243230375","Challenger's Street|Challenger's Street":"2149920147","obby with a thingamasilly at the end!!|BYFATETOFATE":"3489370334105942","SCP: The Red Lake|Hell Showdown":"462112193404421","OVER-DRILLED|The City":"3200622397565187","The Crew's Night|TORMENTED":"3501536221527787","A Way Everything Goes|LOCKED IN!":"3867729815748716","Survive The Disasters 2|100 Streak (Hardcore)":"545795060","Obby Royale|Death Defier":"2128075325","Defend The Core II|Fearsome Five - Perfectionist Mode Complete!":"3964471219196562","Portu After Dark|Sleepover":"2494273146112543","A-888: Project: Creedbreaker|0 Seconds to Midnight":"3377676119848774","Arena: Tower Defense!|Perfect Hybrid Scout":"2126708245","Residence Massacre|Completionist":"2123211861662724","Boss Fighting Stages|Draco Arcade LVL3:[Complete]":"2142090994","speed demon boss fight (real)|0-S Sanguine Spectre":"2787036574019132","Azure Mines|Completionist":"2129237314","1010!|Score 250,000":"2124479617","PIBBS' BADGER|TRUE COMPLETIONIST (96 BADGES)":"3396602994384598","Outrun the Nightmare|Outran the Psychosis":"1384637951205552","Sisyphus Simulator|All Trials":"419306350768576","Find the Doge Heads 2|Overachiever Doge":"2124469233","Tower Defense Simulator|Triumph Voidcore":"2895606253207273","The RakOOF|What are you trying to prove?":"4252616618926877","BCWR: Reign of Lord Astaroth|Soul of Oblivion":"3268326459559596","Every (Minigames) End|The One Above Kaizo!":"2085103997678095","Deity Arena|L.":"2124804138","IN 1 MINUTE YOU WILL EXPLODE|How did we get here?":"331825303180361","Survival The SML the Killers|AW SHUCKS":"3257181015068885","Taxi Simulator 2|Guest Land":"2655881046694087","Strange Place|Final boss":"2127021083","Dummies vs Noobs|GO OUTSIDE":"2144392606","Undertale: Judgement Day|...":"2124746912","Celestial Caverns|Warehouse":"2590250457527558","Dandy's World|Twisteds Fear Me.":"489243865301208","Pool|A Goliath":"973637750890919","KittyLand (Horror)|True Squad Nightmare":"1005462710063548","Resurrections|Bind All the Flowers":"2506617196729085","Confinement|Stocked Up":"1374635805716145","Crystalis Boss Fights|Lightwing, Begone!":"4107732111901533","🚩Super Check Point!|Classic Champion":"2129541743","Allusions|[HOLLOW IMITATION]":"2578040513440273","Shifts at Big Q's|6/20":"2128256477","PSYCHOCATS 2|True Perfectionist":"2125048006","Pandi's Aim Trainer|25,000 in Score!":"1670955772160660","Tower Battles: Battlefront|Lone Void Specialist":"2128712186","Fumo Horrors|Survive a XK OUTBREAK Round":"2142574923","Loop|Day 100":"1782434602772191","🌱 Grass Cutting Incremental 🌱|Omega Loop [Bonus]":"2152554133","Entry Point|Phoenix Rising":"2124535141","Project: RUSHER|3000 Rating":"1195419684923066","obby definitive edition|MEET THE O̶W̶N̶E̶R̶ BLOODLESS ONE":"3161559228909797","Blackout: Revival|DEATH'S VERDICT":"1627854340685068","The Difficulty Upgrade Tree: Regrown|Limits of All Chaos (Lap Cluster B)":"3807974385608602","flop world|Floor 250":"2382366480490752","Something Boss Fights|CHALLENGE: Calamity Voril":"1585279278162385","Balance|Balance Pro":"2041282651927587","Reminiscence Zombies|Zombie Scout":"276670746098486","Caustic Confines|Avenge the Fallen":"1094234119254458","Ultimate Retro Night: Singleplayer|He Burns":"102156703159466","Be Saga|Be True Completionist":"1419580412374145","Industrialist|Still possible!":"3010191455762019","Random 6:06 Sublevels|COMPLETIONIST":"2982537757487972","THE CRIMSON PERPLEXION|TENEBROUS HELLFIRE":"1545382135297039","Tower of Hell|Certified Beast":"4002614570086808","TRIA.os - Escape|Master of Difficulties":"1617420806532574","Just Shapes and Beats|1000%":"14758685096230","Zenith Tower|THANKS FOR PLAYING":"3401048837899809","Skill Based Boss Fights|A Forgotten Catastrophe":"3834149559424589","Five Nights at The Gang's|100% Game (Currently Bugged)":"2513685121609340","Supreme Kaizo Robot 64 2*3: 2: Fixed Version|45 Cold Thing !!!!!!!!!!!!!!!!!!!!!!!":"2404901326672935","Super Deadly Levels List|Cruel Punishment":"497496739477207","Basically FNF: Remix|Camellia Dan":"2382393400075575","Friendly Smile 6:06|Hallucination":"2142357976","🎮 Cornerstone Arcade Reborn|Hardcore Completionist":"3983648636709993","SUNDOWNER|PERDITION: CESSATION":"2566699870453655","Five Nights at Mexik's 1 :REMASTERED|What?":"2473553935649761","Defend the Statue: Eras of Conflict|Loremaster":"3685286910599393","Frozen Over Games Hub|The Ultimate Badge":"2743922622065331","Party Chaos|Monochromatic Hell":"2842166401963102","Realm Archive|Every Last Secret":"2866367165754913","Find The Amoguses|Novisor Amogus 2":"2125146438","Tower Invaders: Organized Chaos|The End":"2718193388755270","Find the BFB Characters|Main Realm Medallion":"2151634007180491","Isaac's Minesweeper|Get 90% Completion":"692598451103550","Defend The Core - Remastered|The Promise":"925051995736017","A Jumpless Demise|Above The Darkness":"1140810596059302","Deadfront [BETA]|NIGHT 100":"933582771939366","No Exit [10 Player Obby]|Hell Is Other People":"511118968423632","Kaizo Adventure Forward: Star Savior|All stars":"2956549780868346","Football Fusion 3|Legendary":"1093089118408958","I Wanna Test The Game|Eye Defeated The Greatest":"3758765531462525","Radiance Recreation (EXTREME MODE)|Goku's Wrath No Hit":"3455631288165551","Taxi Simulator (Brick Cars Edition)|Over Achiever of Lanes!":"538428880","King of Wallhops|Bluebob's Trials":"2113692848221736","The Gang's Warehouse|INVICTUS":"3256856447039175","I want to be free|tower1 Golden":"261731099405268","The Train Tunnels 🚂|Last Stop":"1899058127972505","Aphasic Song|Segel 4 Empat":"103959368639049","FNAAWC 3|Pardoned":"3470534424164839","The Destroyed Future|Approaching Storm - 300%":"3629691917367515","Modespice Extra++|FLAWLESS TRUE SQUID":"3486554656517732","Defend the Statue|TALE OF TESTAMENT":"2130231219","Bee Swarm Simulator|Mountain Top Grandmaster":"2455366474634025","smile|Winner! (Kaizo Mode)":"4481177898980930","The Final Stand 2|Night 30 - Impossible":"3429546795677912","The Zombie's Revenge|Azura Award":"480785527418397","Enigmatic Void|???":"2124589354","Flood Escape Ultimate ⚡|Ascension to Heaven":"4116335988945780","One Thousand Rooms|Taking an Immeasurable Risk":"2216593496280568","Enfosi|MANIAC COMPLETION":"328301761710109","Randomly Generated Droids|FOOLISH!!!!":"4020345700990924","Japanese Meme Elevator|Legend PERFECT RUN":"1931313792863792","Zipline Obby 2025|Deathless Completion":"149239199498488","The Omniverse|Psychotic Sociopath (Video Proof)":"2124934929","Liquid Breakout|Checklist - All Maps":"3096677987360053","Sword Fighting Chaos|Elite rank":"3951133187511878","Malachite Miners 2|Voluntary Torment":"2660536091725298","TS!CouchSwap Headed Reded (Unofficial)|Desecration":"2128206188","Caleb's Soul Crushing Domain|Chaotic Tower - All Jumps":"2405693705723458","Kaizo Robot 64 - Alter|Still Having Fun?":"1545048226794541","DLB: Custom Night|One Of Us.":"2768666680871767","Eternal Towers of Hell|Beat The Tower of Cruel Punishment":"2125416545","CG Custom Maps Toplist [CGCR]|The Apostle of the Void":"562468698160673","Ascension to Taser|who do you think you are?":"1950236288755467","rosu!mania Music + Rhythm|Midnight Illusion III":"2127988811","The Great Centurial: Revived|Completed 61-70":"2127507255","(CI PHASE 2) THE GAUNTLET|PARASITIC DEMISE":"4098427504008486","Devoid|Devoid - Completed Hardcore Mode":"2210300522234642","Minesweeper Duels|S+ Rank":"3919762573448774","True lap 3 hardmode.|SUBLEVEL 120":"3656422509798195","Find the Cubes!|Verified Legend of the Multicube":"3528743272391928","The Ultimate Destroyer of Limits|Limitless":"3274649230832221","[Race to the End of Time]|Some things weren't made to be beaten":"2412613705907502","Kaizo Robot 64|Out of the Park":"1119210290988366","Nullscape|100% EXTREME":"3659971402224657","NOLTN's Hellbeats Archive|finally free, feeling freedom":"1610857310610080","Beat Bounce|The Milky Wave":"1435215198823485","John Man ALL JALAPENOS|I'm here.":"925727127321812","⚜️ The House ⚜️|Misery Mettle":"2126411427","Stairway to Heaven|Ascended":"2746535919927396","The Eternal Abyss|Tower of The Quest For Perfection":"1629929481114813","Touge Legends: Reborn|Who Needs Power?":"3505984142251453","Taxi Simulator: The Future Challenges|Conqueror's Avenue":"1672612133705723"};
 SAMPLE.forEach(b=>{b.id=DEFAULT_IDS[bk(b)]||null;b.t=DEFAULT_TIERS[bk(b)]??null});
-let S={badges:SAMPLE.map(b=>({...b,victors:[]})),deleted:[],admin:false,f:"all",q:"",tab:"tr",profileUid:null,profileData:null,myProgress:{},publicProfiles:[],selectedProfileUid:null,legacyLoaded:false};
+let S={badges:SAMPLE.map(b=>({...b,victors:[]})),deleted:[],admin:false,f:"all",q:"",tab:"tr",profileUid:null,profileData:null,myProgress:{},publicProfiles:[],selectedProfileUid:null,profileMode:"directory",compareProfileA:null,compareProfileB:null,profileSortMode:"difficulty",legacyLoaded:false};
 const LEGACY_LOCAL_DATA=(()=>{try{return JSON.parse(localStorage.getItem("uhbl2")||"{}")}catch(e){return {}}})();
 let legacyReadyResolve;
 const legacyReady=new Promise(resolve=>{legacyReadyResolve=resolve});
@@ -746,7 +819,16 @@ return `<svg viewBox="0 0 64 64"><polygon points="32,2 60,18 60,46 32,62 4,46 4,
 // ask Roblox for a replacement. Use capture because image error events do not bubble.
 document.addEventListener("error",e=>{
   const img=e.target;
-  if(!img||!img.dataset||!img.dataset.badgeIcon)return;
+  if(!img||!img.dataset)return;
+  if(img.dataset.playerAvatar){
+    const fallback=document.createElement("div");
+    fallback.className=String(img.className||"player-avatar");
+    fallback.textContent=img.dataset.avatarInitial||"U";
+    fallback.setAttribute("aria-label","Roblox avatar unavailable");
+    img.replaceWith(fallback);
+    return;
+  }
+  if(!img.dataset.badgeIcon)return;
   const id=String(img.dataset.badgeIcon),badUrl=IMG[id];
   if(!badUrl)return;
   ICON_REJECTED[id]=badUrl;
@@ -762,18 +844,138 @@ function rank(list){return list.length?list.map((e,i)=>`<div class="row ${i<3?"r
 // The tracker is a community-wide view. Login never changes which badges
 // are shown as completed; personal profiles are a separate view.
 function ownsBadge(b){return getGlobalVictors(b).length>0}
+function profileBadgeKeys(profile){
+  return new Set(Array.isArray(profile?.earnedBadgeKeys)?profile.earnedBadgeKeys:[]);
+}
+function profileVerifiedKeys(profile){
+  return new Set(Array.isArray(profile?.verifiedBadgeKeys)?profile.verifiedBadgeKeys:[]);
+}
+function profileBadges(profile){
+  const keys=profileBadgeKeys(profile);
+  return S.badges.filter(b=>keys.has(bk(b)));
+}
+function profileAvatar(profile,size=""){
+  const id=String(profile?.robloxUserId||"");
+  if(!/^\d{1,20}$/.test(id))return `<div class="player-avatar ${size}" aria-label="Avatar unavailable">${esc(String(profile?.displayName||profile?.robloxUsername||"U").slice(0,1).toUpperCase())}</div>`;
+  const src=`https://www.roblox.com/headshot-thumbnail/image?userId=${encodeURIComponent(id)}&width=150&height=150&format=png`;
+  const initial=String(profile?.displayName||profile?.robloxUsername||"U").slice(0,1).toUpperCase();
+  return `<img class="player-avatar ${size}" data-player-avatar="1" data-avatar-initial="${esc(initial)}" src="${esc(src)}" alt="${esc(profile?.robloxUsername||"Roblox player")} avatar" loading="lazy">`;
+}
+function profileMetrics(profile,communityStats=null){
+  const badges=profileBadges(profile),verified=profileVerifiedKeys(profile);
+  const firsts=badges.filter(b=>{const f=first(b);return f&&key(f.n)===key(profile?.robloxUsername||"")}).length;
+  const games=new Set(badges.map(b=>b.game)).size;
+  const tierCounts={};
+  badges.forEach(b=>{const label=b.t==null?"Unassigned":b.t===0?"Entry":`${b.t}★`;tierCounts[label]=(tierCounts[label]||0)+1});
+  const tiers=badges.map(b=>b.t).filter(t=>Number.isInteger(t));
+  const hardestTier=tiers.length?Math.max(...tiers):null;
+  const hardest=hardestTier==null?[]:badges.filter(b=>b.t===hardestTier);
+  const pct=S.badges.length?Math.round(badges.length/S.badges.length*100):0;
+  const totals=communityStats||stats();
+  const totalRank=totals.tot.findIndex(([name])=>key(name)===key(profile?.robloxUsername||""));
+  const firstRank=totals.fc.findIndex(([name])=>key(name)===key(profile?.robloxUsername||""));
+  return {badges,verified,verifiedCount:badges.filter(b=>verified.has(bk(b))).length,legacyCount:badges.filter(b=>!verified.has(bk(b))).length,firsts,games,tierCounts,hardestTier,hardest,pct,totalRank:totalRank<0?null:totalRank+1,firstRank:firstRank<0?null:firstRank+1};
+}
+function profileBadgeCompletionDate(profile,b){
+  const badgeKey=bk(b);
+  let raw=profile?.earnedAtByBadge?.[badgeKey]||profile?.verifiedEarnedAt?.[badgeKey]||null;
+  // Older public profiles may not have the per-badge date map yet. Recover
+  // their dates from the existing shared community victor records where possible.
+  if(!raw){
+    const victor=getGlobalVictors(b).find(v=>key(v.n)===key(profile?.robloxUsername||"")&&v.d);
+    raw=victor?.d||null;
+  }
+  if(raw==null||raw==="")return null;
+  const date=typeof raw==="number"?new Date(raw):new Date(String(raw));
+  return Number.isNaN(date.getTime())?null:date;
+}
+function formatProfileCompletionDate(date){
+  if(!date)return "Completion date unavailable";
+  return `Completed ${new Intl.DateTimeFormat(undefined,{year:"numeric",month:"short",day:"numeric"}).format(date)}`;
+}
+function profileAchievementCard(profile,b){
+  const verified=profileVerifiedKeys(profile).has(bk(b));
+  const date=profileBadgeCompletionDate(profile,b);
+  return `<div class="profile-achievement"><div class="top">${icon(b)}</div><div class="profile-achievement-info"><div class="profile-achievement-name">${esc(b.name)}</div><div class="profile-achievement-game">${esc(b.game)}${b.t!=null?` · ${esc(TL(b.t))}`:""}</div><div class="profile-achievement-date ${date?"":"unavailable"}">${esc(formatProfileCompletionDate(date))}</div><div class="profile-achievement-tag">${verified?"Roblox verified":"Community / legacy record"}</div></div></div>`;
+}
+function sortProfileAchievements(profile,badges){
+  const mode=S.profileSortMode||"difficulty";
+  const difficultyCompare=(a,b)=>((b.t??-1)-(a.t??-1))||a.game.localeCompare(b.game)||a.name.localeCompare(b.name);
+  if(mode==="oldest"||mode==="newest"){
+    return [...badges].sort((a,b)=>{
+      const da=profileBadgeCompletionDate(profile,a),db=profileBadgeCompletionDate(profile,b);
+      // Unknown dates stay at the bottom in either chronological direction.
+      if(!da&&!db)return difficultyCompare(a,b);
+      if(!da)return 1;if(!db)return -1;
+      const delta=da.getTime()-db.getTime();
+      return (mode==="newest"?-delta:delta)||difficultyCompare(a,b);
+    });
+  }
+  return [...badges].sort(difficultyCompare);
+}
+function profileHeader(mode,subtitle){
+  return `<div class="profile-hub-head"><div><h1 class="profile-hub-title">Player Profiles</h1><div class="profile-hub-subtitle">${subtitle}</div></div><div class="profile-subtabs"><button type="button" data-profile-mode="directory" class="${mode==="directory"?"active":""}">All players</button><button type="button" data-profile-mode="compare" class="${mode==="compare"?"active":""}">Compare players</button></div></div>`;
+}
+function renderPlayerDetail(profile){
+  const m=profileMetrics(profile,stats()),name=profile.displayName||profile.robloxUsername||"UHBL Player";
+  const hardestLabel=m.hardestTier==null?"Not ranked":m.hardestTier===0?"Entry level":`${m.hardestTier} star${m.hardestTier===1?"":"s"}`;
+  const lastSync=profile.updatedAt?new Date(profile.updatedAt).toLocaleString():"Not available";
+  const compareTarget=S.compareProfileA&&S.compareProfileA!==profile.uid?S.compareProfileA:(S.publicProfiles.find(x=>x.uid!==profile.uid)?.uid||null);
+  const achievements=sortProfileAchievements(profile,m.badges);
+  const datedAchievementCount=m.badges.filter(b=>profileBadgeCompletionDate(profile,b)).length;
+  const rankText=[m.totalRank?`#${m.totalRank} in total tracked badges`:null,m.firstRank?`#${m.firstRank} in first clears`:null].filter(Boolean).join(" · ")||"Not yet ranked on the community leaderboard";
+  return `<div class="profile-hub">${profileHeader("directory","Detailed community profiles, badge history and player statistics.")}
+    <div class="player-profile-hero">${profileAvatar(profile,"large")}<div class="player-profile-identity"><div class="player-profile-name">${esc(name)}</div><div class="player-profile-handle">@${esc(profile.robloxUsername||"Unknown Roblox account")} · Roblox ID ${esc(profile.robloxUserId||"Unknown")}</div><div class="player-profile-meta"><span class="profile-pill verified">${m.verifiedCount} Roblox verified</span><span class="profile-pill">${m.legacyCount} legacy / community</span><span class="profile-pill">${esc(hardestLabel)} hardest tier</span></div></div><div class="player-profile-actions"><button type="button" data-profile-mode="compare" data-compare-player="${esc(profile.uid)}">Compare player</button><button type="button" data-profiles-back>← All players</button></div></div>
+    <div class="profile-stat-grid">
+      <div class="profile-stat-card"><strong>${m.badges.length}</strong><span>Tracked badges</span></div>
+      <div class="profile-stat-card"><strong>${m.pct}%</strong><span>Collection completion</span></div>
+      <div class="profile-stat-card"><strong>${m.verifiedCount}</strong><span>Roblox verified</span></div>
+      <div class="profile-stat-card"><strong>${m.firsts}</strong><span>Community first clears</span></div>
+      <div class="profile-stat-card"><strong>${m.games}</strong><span>Games represented</span></div>
+      <div class="profile-stat-card"><strong>${m.hardest.length}</strong><span>Badges at hardest tier</span></div>
+    </div>
+    <div class="profile-section"><div class="profile-section-head"><h2>Collection progress</h2><strong>${m.badges.length} / ${S.badges.length}</strong></div><div class="player-progress"><span style="width:${Math.min(100,m.pct)}%"></span></div><div class="player-progress-label"><span>${m.pct}% of UHBL tracked badges</span><span>Profile updated: ${esc(lastSync)}</span></div><p class="profile-rank-line">${esc(rankText)}</p></div>
+    <div class="profile-section"><h2>Difficulty breakdown</h2><div class="profile-tier-grid">${[0,1,2,3,4,5,6].map(t=>{const label=t===0?"Entry":`${t} star${t===1?"":"s"}`;const count=m.tierCounts[t===0?"Entry":`${t}★`]||0;return `<div class="profile-tier-item"><strong>${count}</strong><span>${label}</span></div>`}).join("")}<div class="profile-tier-item"><strong>${m.tierCounts.Unassigned||0}</strong><span>Unassigned</span></div></div></div>
+    <div class="profile-section"><div class="profile-section-head"><h2>Hardest achievements</h2><span class="gm">${esc(hardestLabel)}</span></div>${m.hardest.length?`<div class="profile-achievements">${m.hardest.slice(0,8).map(b=>profileAchievementCard(profile,b)).join("")}</div>`:`<div class="compare-empty">No tiered achievements recorded yet.</div>`}</div>
+    <div class="profile-section"><div class="profile-section-head"><div><h2>Achievement collection</h2><span class="gm">${achievements.length} badges · ${datedAchievementCount} with completion dates</span></div><div class="profile-sort-tools"><label for="profileAchievementSort">Sort by</label><select id="profileAchievementSort"><option value="difficulty" ${S.profileSortMode==="difficulty"?"selected":""}>Difficulty</option><option value="newest" ${S.profileSortMode==="newest"?"selected":""}>Newest first</option><option value="oldest" ${S.profileSortMode==="oldest"?"selected":""}>Oldest first</option></select></div></div>${achievements.length?`<div class="profile-achievements">${achievements.map(b=>profileAchievementCard(profile,b)).join("")}</div>`:`<div class="empty">No tracked badges published yet.</div>`}</div>
+  </div>`;
+}
+function renderComparePlayers(){
+  const profiles=[...S.publicProfiles].sort((a,b)=>String(a.robloxUsername||"").localeCompare(String(b.robloxUsername||"")));
+  if(!S.compareProfileA||!profiles.some(p=>p.uid===S.compareProfileA))S.compareProfileA=profiles[0]?.uid||null;
+  if(!S.compareProfileB||!profiles.some(p=>p.uid===S.compareProfileB)||S.compareProfileB===S.compareProfileA)S.compareProfileB=profiles.find(p=>p.uid!==S.compareProfileA)?.uid||null;
+  const a=profiles.find(p=>p.uid===S.compareProfileA),b=profiles.find(p=>p.uid===S.compareProfileB);
+  const options=(selected)=>profiles.map(p=>`<option value="${esc(p.uid)}" ${p.uid===selected?"selected":""}>${esc(p.displayName||p.robloxUsername||"UHBL Player")} (@${esc(p.robloxUsername||"unknown")})</option>`).join("");
+  if(!profiles.length)return `<div class="profile-hub">${profileHeader("compare","Compare badge collections, completion progress and community first clears.")}<div class="empty">No public player profiles are available to compare yet.</div></div>`;
+  if(!a||!b)return `<div class="profile-hub">${profileHeader("compare","Compare badge collections, completion progress and community first clears.")}<div class="empty">At least two public player profiles are needed for comparison. More players will appear here as they link Roblox and publish progress.</div></div>`;
+  const communityStats=stats();
+  const am=profileMetrics(a,communityStats),bm=profileMetrics(b,communityStats),ak=profileBadgeKeys(a),bkSet=profileBadgeKeys(b);
+  const shared=S.badges.filter(x=>ak.has(bk(x))&&bkSet.has(bk(x)));
+  const onlyA=S.badges.filter(x=>ak.has(bk(x))&&!bkSet.has(bk(x)));
+  const onlyB=S.badges.filter(x=>bkSet.has(bk(x))&&!ak.has(bk(x)));
+  const list=(arr,profile)=>arr.length?`<div class="compare-list">${arr.slice(0,24).map(x=>`<div class="compare-list-item">${esc(x.name)}<small>${esc(x.game)}${x.t!=null?` · ${esc(TL(x.t))}`:""}</small></div>`).join("")}${arr.length>24?`<div class="gm">And ${arr.length-24} more…</div>`:""}</div>`:`<div class="compare-empty">No badges in this category.</div>`;
+  return `<div class="profile-hub">${profileHeader("compare","Compare badge collections, completion progress and community first clears.")}
+    <div class="profile-section"><div class="compare-picker"><label class="compare-player-picker"><span class="lab">Player A</span><select data-profile-compare="a">${options(S.compareProfileA)}</select></label><div class="compare-vs">VS</div><label class="compare-player-picker"><span class="lab">Player B</span><select data-profile-compare="b">${options(S.compareProfileB)}</select></label></div></div>
+    <div class="compare-columns"><div class="compare-column"><div class="player-card-top">${profileAvatar(a)}<div><div class="player-name">${esc(a.displayName||a.robloxUsername)}</div><div class="player-handle">@${esc(a.robloxUsername||"")}</div></div></div><div class="player-progress"><span style="width:${am.pct}%"></span></div><div class="player-progress-label"><span>${am.pct}% completion</span><span>${am.badges.length} badges</span></div></div><div class="compare-column"><div class="player-card-top">${profileAvatar(b)}<div><div class="player-name">${esc(b.displayName||b.robloxUsername)}</div><div class="player-handle">@${esc(b.robloxUsername||"")}</div></div></div><div class="player-progress"><span style="width:${bm.pct}%"></span></div><div class="player-progress-label"><span>${bm.pct}% completion</span><span>${bm.badges.length} badges</span></div></div></div>
+    <div class="compare-summary"><div class="compare-stat"><strong>${shared.length}</strong><span>Badges in common</span></div><div class="compare-stat"><strong>${onlyA.length}</strong><span>Unique to ${esc(a.robloxUsername||"Player A")}</span></div><div class="compare-stat"><strong>${onlyB.length}</strong><span>Unique to ${esc(b.robloxUsername||"Player B")}</span></div></div>
+    <div class="compare-columns"><div class="compare-column"><h3>${esc(a.robloxUsername||"Player A")} · Exclusive badges</h3>${list(onlyA,a)}</div><div class="compare-column"><h3>${esc(b.robloxUsername||"Player B")} · Exclusive badges</h3>${list(onlyB,b)}</div></div>
+    <div class="profile-section"><div class="profile-section-head"><h2>Shared achievements</h2><span class="gm">${shared.length} in common</span></div>${list(shared,a)}</div>
+    <div class="profile-section"><h2>Head-to-head stats</h2><div class="compare-columns"><div class="compare-column"><h3>${esc(a.robloxUsername||"Player A")}</h3><div class="profile-rank-line">${am.verifiedCount} verified badges<br>${am.firsts} community first clears<br>${am.games} games represented<br>${am.hardestTier==null?"No tiered badges":esc(am.hardestTier===0?"Entry level":`${am.hardestTier} stars`)+" hardest tier"}</div></div><div class="compare-column"><h3>${esc(b.robloxUsername||"Player B")}</h3><div class="profile-rank-line">${bm.verifiedCount} verified badges<br>${bm.firsts} community first clears<br>${bm.games} games represented<br>${bm.hardestTier==null?"No tiered badges":esc(bm.hardestTier===0?"Entry level":`${bm.hardestTier} stars`)+" hardest tier"}</div></div></div></div>
+  </div>`;
+}
 function renderProfiles(){
   const v=$("#view");
   if(S.selectedProfileUid){
     const p=S.publicProfiles.find(x=>x.uid===S.selectedProfileUid);
     if(!p){S.selectedProfileUid=null;return renderProfiles()}
-    const keys=Array.isArray(p.earnedBadgeKeys)?p.earnedBadgeKeys:[];
-    const earned=S.badges.filter(b=>keys.includes(bk(b)));
-    v.innerHTML=`<div class="profile-card"><button data-profiles-back type="button">← All profiles</button><div class="nm">${esc(p.displayName||p.robloxUsername||"UHBL Player")}</div><div class="gm">@${esc(p.robloxUsername||"Unknown Roblox account")}</div><div class="profile-stats"><div class="profile-stat"><strong>${Number(p.ownedCount||0)}</strong><span class="gm">Tracked badges</span></div><div class="profile-stat"><strong>${Number(p.verifiedOwnedCount||0)}</strong><span class="gm">Roblox-verified</span></div><div class="profile-stat"><strong>${Number(p.legacyCount||0)}</strong><span class="gm">Legacy records</span></div></div><h2>Achievements</h2>${earned.length?`<div class="profile-grid">${earned.map(b=>`<div class="profile-card"><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}</div>${b.t!=null?`<div class="tier">${TL(b.t)}</div>`:""}</div>`).join("")}</div>`:`<div class="empty">No tracked badges published yet.</div>`}</div>`;
-    return;
+    v.innerHTML=renderPlayerDetail(p);return;
   }
-  const profiles=[...S.publicProfiles].sort((a,b)=>(Number(b.verifiedOwnedCount||0)-Number(a.verifiedOwnedCount||0))||String(a.robloxUsername||"").localeCompare(String(b.robloxUsername||"")));
-  v.innerHTML=profiles.length?`<div class="profile-grid">${profiles.map(p=>`<div class="profile-card"><div class="nm">${esc(p.displayName||p.robloxUsername||"UHBL Player")}</div><div class="gm">@${esc(p.robloxUsername||"Unknown Roblox account")}</div><div class="gm">${Number(p.verifiedOwnedCount||0)} verified · ${Number(p.ownedCount||0)} total tracked badges</div><button data-open-profile="${esc(p.uid)}" type="button">View profile</button></div>`).join("")}</div>`:`<div class="empty">No public player profiles yet. Sign in, link your Roblox account, and sync badges to create the first profile.</div>`;
+  if(S.profileMode==="compare"){
+    v.innerHTML=renderComparePlayers();return;
+  }
+  const profiles=[...S.publicProfiles].sort((a,b)=>(Number(b.verifiedOwnedCount||0)-Number(a.verifiedOwnedCount||0))||(Number(b.ownedCount||0)-Number(a.ownedCount||0))||String(a.robloxUsername||"").localeCompare(String(b.robloxUsername||"")));
+  const communityStats=stats();
+  v.innerHTML=`<div class="profile-hub">${profileHeader("directory","Explore UHBL players, their tracked collections, hardest clears and community rankings.")}${profiles.length?`<div class="profile-grid">${profiles.map(p=>{const m=profileMetrics(p,communityStats);const hardest=m.hardestTier==null?"Unranked":m.hardestTier===0?"Entry level":`${m.hardestTier}★`;return `<article class="player-card"><div class="player-card-top">${profileAvatar(p)}<div style="min-width:0"><div class="player-name">${esc(p.displayName||p.robloxUsername||"UHBL Player")}</div><div class="player-handle">@${esc(p.robloxUsername||"Unknown Roblox account")}</div></div></div><div class="player-mini-stats"><div class="player-mini-stat"><strong>${m.badges.length}</strong><span>Badges</span></div><div class="player-mini-stat"><strong>${m.pct}%</strong><span>Completion</span></div><div class="player-mini-stat"><strong>${m.firsts}</strong><span>First clears</span></div><div class="player-mini-stat"><strong>${m.verifiedCount}</strong><span>Verified</span></div></div><div class="player-progress"><span style="width:${m.pct}%"></span></div><div class="player-progress-label"><span>${m.games} games represented</span><span>${esc(hardest)} hardest</span></div><div class="player-card-actions"><button type="button" data-open-profile="${esc(p.uid)}">View profile</button><button type="button" data-compare-player="${esc(p.uid)}">Compare</button></div></article>`}).join("")}</div>`:`<div class="empty">No public player profiles yet. Sign in, link your Roblox account, and sync badges to create the first profile.</div>`}</div>`;
 }
 function render(){
   const done=S.badges.filter(b=>ownsBadge(b)).length;
@@ -826,8 +1028,10 @@ function doRoll(){if(S.rolling)return;const p=pool(),r=$("#rres");
   const iv=setInterval(()=>{k++;if(k>=18){clearInterval(iv);S.rolling=false;S.roll=S.badges.indexOf(final);r.innerHTML=resCard(final);return}
     r.innerHTML=resCard(p[Math.random()*p.length|0],true)},70+k*6)}
 document.addEventListener("click",e=>{const t=e.target;
-  if(t.dataset.openProfile){S.selectedProfileUid=t.dataset.openProfile;renderProfiles()}
-  if(t.dataset.profilesBack!=null){S.selectedProfileUid=null;renderProfiles()}
+  if(t.dataset.profileMode){S.profileMode=t.dataset.profileMode;S.selectedProfileUid=null;renderProfiles()}
+  if(t.dataset.comparePlayer){const uid=t.dataset.comparePlayer;S.compareProfileA=uid;if(!S.compareProfileB||S.compareProfileB===uid)S.compareProfileB=S.publicProfiles.find(p=>p.uid!==uid)?.uid||null;S.selectedProfileUid=null;S.profileMode="compare";renderProfiles()}
+  if(t.dataset.openProfile){S.selectedProfileUid=t.dataset.openProfile;S.profileMode="directory";renderProfiles()}
+  if(t.dataset.profilesBack!=null){S.selectedProfileUid=null;S.profileMode="directory";renderProfiles()}
   if(t.dataset.rt!=null){S.rt=t.dataset.rt=="any"?"any":+t.dataset.rt;S.roll=null;render()}
   if(t.dataset.rs!=null){S.rs=t.dataset.rs;S.roll=null;render()}
   if(t.dataset.roll)doRoll();
@@ -844,7 +1048,12 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.dataset.rm){const[i,j]=t.dataset.rm.split(":");S.badges[i].victors.splice(+j,1);save();render()}
   if(t.dataset.f){S.f=t.dataset.f;document.querySelectorAll("#flt button").forEach(b=>b.classList.toggle("on",b===t));render()}
   if(t.dataset.t){S.tab=t.dataset.t;document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b===t));render()}});
-document.addEventListener("change",e=>{const t=e.target;if(t.dataset.tier!=null){const i=+t.dataset.tier;S.badges[i].t=t.value===""?null:Number(t.value);save();render();$("#amsg").textContent="Tier saved."}});
+document.addEventListener("change",e=>{const t=e.target;
+  if(t.dataset.tier!=null){const i=+t.dataset.tier;S.badges[i].t=t.value===""?null:Number(t.value);save();render();$("#amsg").textContent="Tier saved."}
+  if(t.dataset.profileCompare==="a"){S.compareProfileA=t.value;if(S.compareProfileA===S.compareProfileB)S.compareProfileB=S.publicProfiles.find(p=>p.uid!==S.compareProfileA)?.uid||null;renderProfiles()}
+  if(t.dataset.profileCompare==="b"){S.compareProfileB=t.value;if(S.compareProfileA===S.compareProfileB)S.compareProfileA=S.publicProfiles.find(p=>p.uid!==S.compareProfileB)?.uid||null;renderProfiles()}
+  if(t.id==="profileAchievementSort"){S.profileSortMode=["difficulty","newest","oldest"].includes(t.value)?t.value:"difficulty";renderProfiles()}
+});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.bid!=null){const i=+e.target.dataset.bid;document.querySelector(`[data-saveid="${i}"]`).click()}});
 $("#q").oninput=e=>{S.q=e.target.value;render()};
 $("#adm").onclick=async e=>{const btn=e.currentTarget,want=!S.admin;
@@ -1105,6 +1314,7 @@ async function publishMyPublicProfile(profile){
     earnedBadgeKeys:entries.map(([k])=>k),
     verifiedBadgeKeys:entries.filter(([,v])=>v&&v.verified===true).map(([k])=>k),
     verifiedEarnedAt:Object.fromEntries(entries.filter(([,v])=>v&&v.verified===true&&v.earnedAt).map(([k,v])=>[k,v.earnedAt])),
+    earnedAtByBadge:Object.fromEntries(entries.filter(([,v])=>v&&v.earnedAt).map(([k,v])=>[k,v.earnedAt])),
     updatedAt:Date.now(),
   };
   await window.fbSavePublicProfile(data);
