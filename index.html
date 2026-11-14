@@ -1112,9 +1112,39 @@ async function syncRobloxBadges(){
   if(!link?.linkToken){robloxStatus("Link and verify your own Roblox account first.");return}
   const button=$("#robloxSync");button.disabled=true;button.textContent="Syncing…";
   try{
-    // The Worker derives the Roblox user ID from the Firebase-UID-bound link token.
-    const data=await workerPost("/roblox/inventory",{linkToken:link.linkToken});
-    const items=Array.isArray(data.inventoryItems)?data.inventoryItems:[];
+    // Cloudflare Free allows 50 external subrequests per Worker invocation.
+    // The Worker returns at most ten Roblox inventory pages per call, then
+    // gives this browser a signed, Firebase-UID-bound continuation cursor.
+    // Each continuation is a new invocation with a fresh subrequest budget.
+    const allItems=[];
+    const seenCursors=new Set();
+    let cursor=null,totalPages=0,batches=0,lastBatch=null;
+    const MAX_TOTAL_PAGES=500;
+    while(true){
+      const requestBody={linkToken:link.linkToken};
+      if(cursor)requestBody.continuationToken=cursor;
+      const batch=await workerPost("/roblox/inventory",requestBody);
+      lastBatch=batch;
+      const batchItems=Array.isArray(batch.inventoryItems)?batch.inventoryItems:[];
+      allItems.push(...batchItems);
+      totalPages+=Number(batch.pagesFetched||0);
+      batches++;
+      robloxStatus(`Syncing @${link.username}: received ${allItems.length} badge items across ${totalPages} inventory pages (${batches} requests)…`);
+
+      const nextCursor=batch.nextCursorToken||null;
+      if(!nextCursor)break;
+      if(seenCursors.has(nextCursor)||nextCursor===cursor){
+        throw new Error("The Worker repeated an inventory continuation cursor. Sync stopped to prevent an infinite loop; no progress was changed.");
+      }
+      seenCursors.add(nextCursor);
+      cursor=nextCursor;
+      if(totalPages>=MAX_TOTAL_PAGES){
+        throw new Error(`Safety limit reached after ${totalPages} inventory pages. No progress was changed; please contact the tracker administrator to review this account's inventory size.`);
+      }
+    }
+
+    const items=allItems;
+    const data=lastBatch||{};
     const owned=new Map();
     let unparsed=0;
     for(const item of items){
@@ -1124,10 +1154,7 @@ async function syncRobloxBadges(){
     }
     const trackedWithIds=S.badges.filter(b=>/^\d+$/.test(String(b.id||"")));
     if(items.length===0){
-      const status=Number.isFinite(Number(data.count))?Number(data.count):0;
-      const err=status===0
-        ?"Roblox returned zero badge inventory items. Check that your API key has User Inventory Read access and that Roblox allows your inventory to be viewed. No progress was changed."
-        :"The inventory response was empty even though the Worker reported a non-zero count. No progress was changed.";
+      const err="Roblox returned zero badge inventory items. Check that your API key has User Inventory Read access and that Roblox allows your inventory to be viewed. No progress was changed.";
       throw new Error(err);
     }
     if(owned.size===0){
@@ -1145,19 +1172,19 @@ async function syncRobloxBadges(){
       if(!previous||previous.verified!==true)added++;
       progress[bk(badge)]={badgeId:id,earnedAt:awardDate,source:"roblox-inventory",verified:true};
     }
-    const next={...profile,progress,lastInventorySync:new Date().toISOString(),lastInventoryCount:items.length,lastInventoryParsedBadgeCount:owned.size,lastInventoryMatchedCount:matched};
+    const next={...profile,progress,lastInventorySync:new Date().toISOString(),lastInventoryCount:items.length,lastInventoryParsedBadgeCount:owned.size,lastInventoryMatchedCount:matched,lastInventoryPagesFetched:totalPages};
     await window.fbSaveUserProfile(next);
     try{
       await publishMyPublicProfile(next);
     }catch(publicError){
-      throw new Error(`Your personal sync was saved (${matched} tracked badges matched), but publishing the global victor/profile update failed: ${publicError.message}. Deploy the updated Firestore rules included with this fix.`);
+      throw new Error(`Your personal sync was saved (${matched} tracked badges matched), but publishing the global victor/profile update failed: ${publicError.message}. Deploy the updated Firestore rules included with the sync fix.`);
     }
     S.profileData=next;S.myProgress=progress;render();
     if(matched===0){
       const examples=[...owned.keys()].slice(0,8).join(", ");
-      robloxStatus(`Roblox returned ${items.length} badge items and UHBL read ${owned.size} badge IDs, but none matched the ${trackedWithIds.length} tracked badges that currently have IDs. Your profile sync ran, but no global victors were added. Example owned badge IDs: ${examples||"none"}. This usually means one or more UHBL badge IDs need correcting.`);
+      robloxStatus(`Roblox returned ${items.length} badge items across ${totalPages} inventory pages and UHBL read ${owned.size} badge IDs, but none matched the ${trackedWithIds.length} tracked badges that currently have IDs. No global victors were added. Example owned badge IDs: ${examples||"none"}. This usually means one or more UHBL badge IDs need correcting.`);
     }else{
-      robloxStatus(`Sync complete for @${link.username}: Roblox returned ${items.length} badge inventory items; UHBL read ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified. Your global victor list has been updated for everyone.${unparsed?` ${unparsed} inventory item(s) had no readable badge ID.`:""}${data.truncated?" The API page limit was reached, so this result may be incomplete.":""}`);
+      robloxStatus(`Sync complete for @${link.username}: Roblox returned ${items.length} badge inventory items across ${totalPages} pages (${batches} Worker requests); UHBL read ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified. Your global victor list has been updated for everyone.${unparsed?` ${unparsed} inventory item(s) had no readable badge ID.`:""}`);
     }
   }catch(error){
     console.error("UHBL badge sync failed",error);
