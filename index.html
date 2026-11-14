@@ -57,6 +57,12 @@ button.danger:hover{background:#ff5555;color:#000;border-color:#ff5555}
 @media(max-width:760px){.admin-create{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.admin-create{grid-template-columns:1fr}}
 
+.auth-box{width:100%;display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);padding:12px;background:#050505}
+.auth-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.auth-grid .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.auth-grid input{width:100%;min-width:0;height:38px}
+.auth-box .profile-actions button{min-height:36px}
+@media(max-width:600px){.auth-grid{grid-template-columns:1fr}.auth-box .profile-actions button{flex:1}}
 .roblox-connect{width:100%;border:1px solid var(--line);padding:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:4px}
 .roblox-connect .field{display:flex;flex-direction:column;gap:5px;min-width:220px;flex:1}
 .roblox-connect input{width:100%;height:36px;min-width:0}
@@ -125,11 +131,25 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
 <main>
   <div class="panel show profile-panel" id="profilePanel">
     <div class="lab" style="width:100%">UHBL account · Personal Roblox profile</div>
-    <div class="profile-actions">
-      <button id="accountLogin" type="button">Sign in / Create profile</button>
-      <button id="accountLogout" type="button" disabled>Sign out</button>
-      <span class="msg" id="accountStatus" aria-live="polite">Sign in with Google to create your own private UHBL profile.</span>
+    <div class="auth-box" id="authBox">
+      <div class="auth-grid">
+        <label class="field"><span class="lab">Email address</span><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" maxlength="254"></label>
+        <label class="field"><span class="lab">Password</span><input id="authPassword" type="password" placeholder="At least 8 characters" autocomplete="current-password" minlength="8" maxlength="128"></label>
+      </div>
+      <div class="profile-actions">
+        <button id="emailSignup" type="button">Create account</button>
+        <button id="emailLogin" type="button">Log in</button>
+        <button id="googleLogin" type="button">Continue with Google</button>
+        <button id="passwordReset" type="button">Forgot password?</button>
+      </div>
+      <div class="profile-help">Google is optional. You can use an email address and password instead. New email/password accounts receive a verification email.</div>
     </div>
+    <div class="profile-actions" id="signedInActions" style="display:none">
+      <button id="accountLogout" type="button">Sign out</button>
+      <button id="linkGoogle" type="button" style="display:none">Link Google to this account</button>
+      <button id="resendVerification" type="button" style="display:none">Resend verification email</button>
+    </div>
+    <span class="msg" id="accountStatus" aria-live="polite">Create an account with email/password, or continue with Google. Both methods create a private UHBL profile.</span>
     <div class="roblox-connect">
       <div class="lab" style="width:100%">Link your own Roblox account</div>
       <label class="field"><span class="lab">Roblox username</span><input id="robloxUsername" type="text" placeholder="Enter your Roblox username" maxlength="20" autocomplete="off"></label>
@@ -703,14 +723,19 @@ function accountStatus(message){const el=$("#accountStatus");if(el)el.textConten
 function robloxStatus(message){const el=$("#robloxProfileStatus");if(el)el.textContent=message}
 function linkedProfile(){return S.profileData&&S.profileData.linkedRoblox?S.profileData.linkedRoblox:null}
 function updateAccountUI(user,profile){
-  const login=$("#accountLogin"),logout=$("#accountLogout"),start=$("#robloxLinkStart"),sync=$("#robloxSync"),name=$("#robloxUsername");
-  if(login)login.disabled=!!user;if(logout)logout.disabled=!user;
+  const authBox=$("#authBox"),signedIn=$("#signedInActions"),logout=$("#accountLogout"),start=$("#robloxLinkStart"),sync=$("#robloxSync"),name=$("#robloxUsername"),linkGoogle=$("#linkGoogle"),resend=$("#resendVerification");
+  if(authBox)authBox.style.display=user?"none":"flex";
+  if(signedIn)signedIn.style.display=user?"flex":"none";
   if(start)start.disabled=!user||!!profile?.linkedRoblox;
   if(sync)sync.disabled=!user||!profile?.linkedRoblox?.linkToken;
+  const providers=user?.providerData?.map(p=>p.providerId)||[];
+  if(linkGoogle)linkGoogle.style.display=user&&!providers.includes("google.com")?"inline-block":"none";
+  if(resend)resend.style.display=user&&providers.includes("password")&&!user.emailVerified?"inline-block":"none";
   if(name&&profile?.linkedRoblox?.username){name.value=profile.linkedRoblox.username;name.disabled=true}
   else if(name){name.disabled=!user;if(!user)name.value=""}
   if(user){
-    accountStatus(`Signed in as ${user.displayName||user.email||"UHBL user"}. Your personal progress is private to this Firebase account.`);
+    const verification=user.email&&!user.emailVerified&&providers.includes("password")?" Your email is not verified yet; check your inbox or resend the verification email.":"";
+    accountStatus(`Signed in as ${user.displayName||user.email||"UHBL user"}. Your personal progress is private to this Firebase account.${verification}`);
     if(profile?.linkedRoblox){
       robloxStatus(`Verified Roblox account: @${profile.linkedRoblox.username} · ID ${profile.linkedRoblox.id}. This UHBL profile can only sync this verified account.`);
       if(start)start.textContent="Account linked";
@@ -719,7 +744,7 @@ function updateAccountUI(user,profile){
       if(start)start.textContent="Start ownership verification";
     }
   }else{
-    accountStatus("Sign in with Google to create your own private UHBL profile.");
+    accountStatus("Create an account with email/password, or continue with Google. Both methods create a private UHBL profile.");
     robloxStatus("Sign in first, then prove ownership of your Roblox account.");
     if(start)start.textContent="Start ownership verification";
   }
@@ -859,7 +884,42 @@ async function syncRobloxBadges(){
   }catch(error){robloxStatus(`Badge sync failed: ${error.message}`)}
   finally{button.disabled=!S.profileData?.linkedRoblox?.linkToken;button.textContent="Sync my badges"}
 }
-$("#accountLogin").addEventListener("click",async()=>{try{await window.fbProfileSignIn()}catch(e){accountStatus(`Sign-in failed: ${e.message}`)}});
+function authEmail(){return $("#authEmail").value.trim()}
+function authPassword(){return $("#authPassword").value}
+function showAuthError(action,error){
+  const messages={
+    "auth/email-already-in-use":"An account already uses this email. Try logging in instead.",
+    "auth/invalid-email":"Enter a valid email address.",
+    "auth/weak-password":"Choose a stronger password (at least 8 characters).",
+    "auth/invalid-credential":"Email or password is incorrect.",
+    "auth/user-not-found":"No account was found for this email. Create an account first.",
+    "auth/wrong-password":"Email or password is incorrect.",
+    "auth/too-many-requests":"Too many attempts. Please wait and try again.",
+    "auth/popup-closed-by-user":"Google sign-in was closed before finishing.",
+    "auth/account-exists-with-different-credential":"An account already exists with this email. Log in using its existing method, then use Link Google to add Google to the same profile."
+  };
+  accountStatus(`${action}: ${messages[error?.code]||error?.message||"Please try again."}`);
+}
+$("#emailSignup").addEventListener("click",async()=>{
+  const email=authEmail(),password=authPassword();
+  if(!email||password.length<8){accountStatus("Enter a valid email and a password with at least 8 characters.");return}
+  try{await window.fbEmailSignUp(email,password);$("#authPassword").value="";accountStatus("Account created! A verification email has been sent. You can start setting up your UHBL profile now.")}
+  catch(e){showAuthError("Sign-up failed",e)}
+});
+$("#emailLogin").addEventListener("click",async()=>{
+  const email=authEmail(),password=authPassword();
+  if(!email||!password){accountStatus("Enter your email and password.");return}
+  try{await window.fbEmailSignIn(email,password);$("#authPassword").value=""}
+  catch(e){showAuthError("Login failed",e)}
+});
+$("#googleLogin").addEventListener("click",async()=>{try{await window.fbGoogleSignIn()}catch(e){showAuthError("Google sign-in failed",e)}});
+$("#passwordReset").addEventListener("click",async()=>{
+  const email=authEmail();if(!email){accountStatus("Enter your email address first, then click Forgot password.");return}
+  try{await window.fbPasswordReset(email);accountStatus("Password reset email sent. Check your inbox.")}
+  catch(e){showAuthError("Password reset failed",e)}
+});
+$("#linkGoogle").addEventListener("click",async()=>{try{await window.fbLinkGoogle();accountStatus("Google has been linked to this UHBL account. You can now sign in either way.")}catch(e){showAuthError("Could not link Google",e)}});
+$("#resendVerification").addEventListener("click",async()=>{try{await window.fbResendVerification();accountStatus("Verification email sent again. Check your inbox.")}catch(e){showAuthError("Could not resend verification email",e)}});
 $("#accountLogout").addEventListener("click",async()=>{try{await window.fbProfileSignOut()}catch(e){accountStatus(`Sign-out failed: ${e.message}`)}});
 $("#robloxLinkStart").addEventListener("click",startRobloxLink);
 $("#robloxVerifyLink").addEventListener("click",verifyRobloxLink);
@@ -881,15 +941,20 @@ frame();render();loadIcons();
 const C=window.FB_CFG;
 if(C){
   const B="https://www.gstatic.com/firebasejs/10.12.2/";
-  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,getDoc,collection},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
+  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,getDoc,collection},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendPasswordResetEmail,sendEmailVerification,linkWithPopup}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
   const app=initializeApp(C),db=getFirestore(app),au=getAuth(app),legacyRef=doc(db,"uhbl","state");
   const userRef=uid=>doc(db,"users",uid);
   const publicRef=uid=>doc(db,"publicProfiles",uid);
   window.LIVE=true;
   window.fbSave=r=>{if(window.ADMIN_UID&&au.currentUser&&au.currentUser.uid===window.ADMIN_UID)setDoc(legacyRef,{badges:r,updated:Date.now()},{merge:true}).catch(e=>alert("Community save failed: "+e.message))};
-  window.fbProfileSignIn=async()=>{const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});const result=await signInWithPopup(au,provider);return result.user};
+  window.fbEmailSignUp=async(email,password)=>{const credential=await createUserWithEmailAndPassword(au,email,password);try{await sendEmailVerification(credential.user)}catch(error){console.warn("Verification email could not be sent:",error)}return credential.user};
+  window.fbEmailSignIn=async(email,password)=>(await signInWithEmailAndPassword(au,email,password)).user;
+  window.fbGoogleSignIn=async()=>{const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});return (await signInWithPopup(au,provider)).user};
+  window.fbLinkGoogle=async()=>{if(!au.currentUser)throw new Error("Sign in first.");const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});return (await linkWithPopup(au.currentUser,provider)).user};
+  window.fbPasswordReset=async(email)=>sendPasswordResetEmail(au,email);
+  window.fbResendVerification=async()=>{if(!au.currentUser)throw new Error("Sign in first.");return sendEmailVerification(au.currentUser)};
   window.fbProfileSignOut=()=>signOut(au);
-  window.fbLogin=async()=>{try{if(au.currentUser&&au.currentUser.uid===window.ADMIN_UID)return true;const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});const r=await signInWithPopup(au,provider);return r.user.uid===window.ADMIN_UID}catch(e){console.error(e);return false}};
+  window.fbLogin=async()=>{try{if(au.currentUser)return au.currentUser.uid===window.ADMIN_UID;const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});const r=await signInWithPopup(au,provider);return r.user.uid===window.ADMIN_UID}catch(e){console.error(e);return false}};
   window.fbGetIdToken=async()=>{if(!au.currentUser)throw new Error("Sign in to UHBL first.");return au.currentUser.getIdToken(true)};
   window.fbLoadUserProfile=async()=>{if(!au.currentUser)throw new Error("Not signed in.");const snap=await getDoc(userRef(au.currentUser.uid));return snap.exists()?snap.data():{}};
   window.fbSaveUserProfile=async data=>{if(!au.currentUser||!data||data.firebaseUid!==au.currentUser.uid)throw new Error("You can only save your own UHBL profile.");await setDoc(userRef(au.currentUser.uid),{...data,updatedAt:Date.now()},{merge:true})};
