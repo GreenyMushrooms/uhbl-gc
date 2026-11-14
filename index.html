@@ -136,7 +136,8 @@ body.account-modal-open{overflow:hidden}
 .auth-divider:before,.auth-divider:after{content:"";height:1px;background:#293029;flex:1}
 .roblox-connect{width:100%;border:1px solid #2b382d;padding:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:4px;background:linear-gradient(145deg,#0c120d,#080b09)}
 .roblox-connect .field{display:flex;flex-direction:column;gap:6px;min-width:220px;flex:1}
-.roblox-connect input{width:100%;height:40px;min-width:0;background:#030403;border-color:#303a31}
+.roblox-connect input{width:100%;height:40px;min-width:0;background:#030403;border-color:#303a31;pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;cursor:text;position:relative;z-index:2}
+.roblox-connect .field{position:relative;z-index:2}
 .roblox-connect button{height:40px}
 .roblox-profile{width:100%;font-size:12px;color:#aab4aa;white-space:pre-wrap;line-height:1.55;padding:11px;border:1px solid #202a21;background:#050805}
 .roblox-profile strong{color:var(--tx)}
@@ -290,7 +291,7 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
           <p class="account-page-subtitle">Verify ownership of your Roblox account. UHBL will only sync badges from the account linked to this profile.</p>
           <div class="roblox-connect">
             <div class="lab" style="width:100%">Link your own Roblox account</div>
-            <label class="field"><span class="lab">Roblox username</span><input id="robloxUsername" type="text" placeholder="Enter your Roblox username" maxlength="20" autocomplete="off"></label>
+            <label class="field"><span class="lab">Roblox username</span><input id="robloxUsername" type="text" placeholder="Enter your Roblox username" maxlength="20" autocomplete="username" aria-label="Roblox username"></label>
             <button id="robloxLinkStart" type="button" disabled>Start ownership verification</button>
             <div id="robloxChallenge" style="display:none;width:100%;flex-direction:column;gap:8px">
               <div class="profile-help">Temporarily add this exact code to the About/description field on the Roblox account, save it, then return here and verify. Remove the code after linking.</div>
@@ -298,7 +299,8 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
               <div class="profile-actions"><button id="copyRobloxChallenge" type="button">Copy code</button><button id="robloxVerifyLink" type="button">Verify ownership</button></div>
             </div>
             <div class="profile-actions"><button id="robloxSync" type="button" disabled>Sync my badges</button></div>
-            <div class="roblox-profile" id="robloxProfileStatus" aria-live="polite">Sign in first, then prove ownership of your Roblox account. Each UHBL profile can sync only its verified linked Roblox account.</div>
+            <div class="profile-help">A successful sync automatically adds your Roblox username to every matching badge in the global community tracker. No one needs to enter victors manually. The same completed badges and victor list are visible whether you are logged in or not.</div>
+            <div class="roblox-profile" id="robloxProfileStatus" aria-live="polite">Sign in first, then prove ownership of your Roblox account. Each UHBL profile can only sync its own verified linked Roblox account.</div>
           </div>
         </section>
         <section class="account-page" id="accountSettingsPage" data-account-page="settings">
@@ -332,7 +334,6 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
     <div class="msg" id="amsg" aria-live="polite"></div>
   </div>
   <div id="view"></div>
-  <datalist id="victorNames"></datalist>
 </main>
 <script>
 // ---- LIVE MODE SETTINGS ----
@@ -710,7 +711,33 @@ async function loadIcons(forceIds=[]){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const key=n=>String(n??"").normalize("NFKC").replace(/\s+/g," ").trim().toLocaleLowerCase();
-function first(b){if(!b.victors.length)return null;const d=b.victors.filter(v=>v.d).sort((a,c)=>a.d<c.d?-1:1);return d.length?d[0]:b.victors[0]}
+function getGlobalVictors(b){
+  const merged=new Map();
+  (Array.isArray(b.victors)?b.victors:[]).forEach((v,index)=>{
+    const name=String(v?.n||"").replace(/\s+/g," ").trim();
+    const k=key(name);
+    if(name&&k&&!merged.has(k))merged.set(k,{...v,n:name,source:"legacy",legacyIndex:index,verified:false});
+  });
+  const badgeKey=bk(b);
+  S.publicProfiles.forEach(profile=>{
+    const name=String(profile?.robloxUsername||"").trim();
+    if(!name||!Array.isArray(profile.verifiedBadgeKeys)||!profile.verifiedBadgeKeys.includes(badgeKey))return;
+    const k=key(name),date=profile.verifiedEarnedAt?.[badgeKey]||null;
+    const existing=merged.get(k);
+    if(existing){
+      existing.verified=true;
+      existing.source="legacy+sync";
+      if(!existing.d&&date)existing.d=date;
+    }else merged.set(k,{n:name,d:date,source:"sync",verified:true,profileUid:profile.uid});
+  });
+  return [...merged.values()];
+}
+function first(b){
+  const victors=getGlobalVictors(b);
+  if(!victors.length)return null;
+  const dated=victors.filter(v=>v.d).sort((a,c)=>String(a.d).localeCompare(String(c.d)));
+  return dated[0]||victors[0];
+}
 function icon(b){if(b.id&&IMG[b.id])return `<img data-badge-icon="${esc(b.id)}" src="${esc(IMG[b.id])}" alt="Roblox badge icon" loading="lazy">`;let h=0;for(const c of b.name)h=(h*31+c.charCodeAt(0))%360;const ini=b.name.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
 return `<svg viewBox="0 0 64 64"><polygon points="32,2 60,18 60,46 32,62 4,46 4,18" fill="hsl(${h},80%,18%)" stroke="hsl(${h},90%,60%)" stroke-width="2.5"/><text x="32" y="40" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="sans-serif">${esc(ini)}</text></svg>`}
 // If a previously cached URL stops working, fall back to the generated icon and
@@ -727,38 +754,12 @@ document.addEventListener("error",e=>{
   render();
   loadIcons([id]);
 },true);
-function knownVictorNames(){
-  const names=new Map();
-  S.badges.forEach(b=>b.victors.forEach(v=>{
-    const name=String(v.n||"").replace(/\s+/g," ").trim();
-    const k=key(name);
-    if(name&&k&&!names.has(k))names.set(k,name);
-  }));
-  return [...names.values()].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:"base"}));
-}
-function updateVictorDatalist(){
-  const dl=$("#victorNames");
-  if(!dl)return;
-  dl.innerHTML=knownVictorNames().map(name=>`<option value="${esc(name)}"></option>`).join("");
-}
-function addVictor(i,name,d){
-  const typed=String(name||"").replace(/\s+/g," ").trim();
-  if(!typed)return;
-  // Reuse the exact spelling of a name already recorded anywhere in UHBL.
-  const canonical=knownVictorNames().find(existing=>key(existing)===key(typed))||typed;
-  const b=S.badges[i];
-  const v=b.victors.find(x=>key(x.n)===key(canonical));
-  if(v){if(d&&(!v.d||d<v.d))v.d=d}
-  else b.victors.push({n:canonical,d:d||null});
-  save();
-}
-function stats(){const tot={},fc={};S.badges.forEach(b=>{b.victors.forEach(v=>tot[v.n]=(tot[v.n]||0)+1);const f=first(b);if(f)fc[f.n]=(fc[f.n]||0)+1});
+function stats(){const tot={},fc={};S.badges.forEach(b=>{getGlobalVictors(b).forEach(v=>tot[v.n]=(tot[v.n]||0)+1);const f=first(b);if(f)fc[f.n]=(fc[f.n]||0)+1});
 const srt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return{tot:srt(tot),fc:srt(fc)}}
 function rank(list){return list.length?list.map((e,i)=>`<div class="row ${i<3?"r"+(i+1):""}"><div class="rk">${i+1}</div><div class="n">${esc(e[0])}</div><div class="s">${e[1]}</div></div>`).join(""):`<div class="empty">No data yet</div>`}
-function ownsBadge(b){
-  if(!S.profileUid)return b.victors.length>0;
-  return Boolean(S.myProgress&&S.myProgress[bk(b)])||Boolean(S.profileData?.linkedRoblox?.username&&b.victors.some(v=>key(v.n)===key(S.profileData.linkedRoblox.username)));
-}
+// The tracker is a community-wide view. Login never changes which badges
+// are shown as completed; personal profiles are a separate view.
+function ownsBadge(b){return getGlobalVictors(b).length>0}
 function renderProfiles(){
   const v=$("#view");
   if(S.selectedProfileUid){
@@ -773,29 +774,27 @@ function renderProfiles(){
   v.innerHTML=profiles.length?`<div class="profile-grid">${profiles.map(p=>`<div class="profile-card"><div class="nm">${esc(p.displayName||p.robloxUsername||"UHBL Player")}</div><div class="gm">@${esc(p.robloxUsername||"Unknown Roblox account")}</div><div class="gm">${Number(p.verifiedOwnedCount||0)} verified · ${Number(p.ownedCount||0)} total tracked badges</div><button data-open-profile="${esc(p.uid)}" type="button">View profile</button></div>`).join("")}</div>`:`<div class="empty">No public player profiles yet. Sign in, link your Roblox account, and sync badges to create the first profile.</div>`;
 }
 function render(){
-  updateVictorDatalist();
   const done=S.badges.filter(b=>ownsBadge(b)).length;
-  $("#count").textContent=S.profileUid?`My badges: ${done} / ${S.badges.length}`:`Community clears: ${done} / ${S.badges.length}`;
+  $("#count").textContent=`Completed: ${done} / ${S.badges.length}`;
   const v=$("#view");
   if(S.tab=="ro"){roulette();return}
   if(S.tab=="lb"){const s=stats();v.innerHTML=`<div class="lb"><div><h2>Community · Most Total Badges</h2>${rank(s.tot)}</div><div><h2>Community · Most First Clears</h2>${rank(s.fc)}</div></div>`;return}
   if(S.tab=="pr"){renderProfiles();return}
   const q=S.q.toLowerCase();
-  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==ownsBadge(b))&&(!q||(b.name+" "+b.game+" "+b.victors.map(x=>x.n).join(" ")).toLowerCase().includes(q)));
+  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==ownsBadge(b))&&(!q||(b.name+" "+b.game+" "+getGlobalVictors(b).map(x=>x.n).join(" ")).toLowerCase().includes(q)));
   // Group badges by difficulty, lowest tier first. Entry Level (0) through 6 stars;
   // unassigned badges are kept at the end. Preserve original order within each tier.
   const tierOrder=t=>t==null?7:t;
   list.sort((a,b)=>tierOrder(a[0].t)-tierOrder(b[0].t)||a[1]-b[1]);
   let lt=null;
-  v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),f=first(b);
+  v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),victors=getGlobalVictors(b),f=first(b),firstName=f?key(f.n):"";
   const tierBadges=b.t==null?[]:S.badges.filter(x=>x.t===b.t);
   const tierDone=tierBadges.filter(x=>ownsBadge(x)).length;
   const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep"><span>${TL(b.t)}</span><span class="sep-count">${tierDone}/${tierBadges.length}</span></div>`):"";
   return hd+`<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
-  <div class="tag">${S.profileUid?(on?"OWNED BY YOU":"NOT OWNED BY YOU"):(on?"COMPLETED":"UNCOMPLETED")}</div><div class="lab">Community victors</div>
-  <div class="vic">${b.victors.length?b.victors.map((x,j)=>`<span class="chip ${f===x?"fc":""}">${f===x?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin?`<b data-rm="${i}:${j}">×</b>`:""}</span>`).join(""):(on?`<span class="gm">Owned in your personal profile</span>`:`<span class="gm">Nobody yet</span>`)}</div>
-  ${S.admin?`<div class="add"><input type="text" list="victorNames" placeholder="Type or select a victor name + Enter" data-in="${i}" aria-label="Victor name"><button data-add="${i}">Add</button></div>
-  <div class="admin-tools">
+  <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Community victors</div>
+  <div class="vic">${victors.length?victors.map(x=>`<span class="chip ${key(x.n)===firstName?"fc":""}">${key(x.n)===firstName?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin&&x.legacyIndex!=null?`<b data-rm="${i}:${x.legacyIndex}" title="Remove legacy victor">×</b>`:""}</span>`).join(""):`<span class="gm">Nobody yet</span>`}</div>
+  ${S.admin?`<div class="admin-tools">
     <div class="field id-field"><span class="lab">Roblox badge ID</span><input inputmode="numeric" placeholder="Enter badge ID" value="${esc(b.id||"")}" data-bid="${i}"></div>
     <button data-saveid="${i}">Save ID</button>
     <div class="field"><span class="lab">Difficulty tier</span><select data-tier="${i}">
@@ -810,7 +809,7 @@ S.rt="any";S.rs="any";S.rolling=false;
 const pool=()=>S.badges.filter(b=>(S.rt=="any"||b.t===S.rt)&&(S.rs=="any"||(S.rs=="done")==ownsBadge(b)));
 function resCard(b,spin){const on=ownsBadge(b);
   return `<div class="card ${on?"on":"off"} ${spin?"spin":""}" style="${on?"":"filter:none;opacity:1"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
-  <div class="tag">${S.profileUid?(on?"OWNED BY YOU":"NOT OWNED BY YOU"):(on?"CLEARED BY "+b.victors.length:"NOBODY HAS CLEARED THIS")}</div></div>`}
+  <div class="tag">${on?`CLEARED BY ${getGlobalVictors(b).length}`:"NOT CLEARED"}</div></div>`}
 function roulette(){
   const tb=[["any","Any tier"],[0,"Entry level"],...[1,2,3,4,5,6].map(n=>[n,n+" ★"])];
   const sb=[["any","Any"],["todo","Not cleared"],["done","Cleared"]];
@@ -830,7 +829,6 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.dataset.rt!=null){S.rt=t.dataset.rt=="any"?"any":+t.dataset.rt;S.roll=null;render()}
   if(t.dataset.rs!=null){S.rs=t.dataset.rs;S.roll=null;render()}
   if(t.dataset.roll)doRoll();
-  if(t.dataset.add!=null){const inp=document.querySelector(`[data-in="${t.dataset.add}"]`);addVictor(+t.dataset.add,inp.value);render()}
   if(t.dataset.saveid!=null){const i=+t.dataset.saveid,inp=document.querySelector(`[data-bid="${i}"]`),id=inp.value.trim();if(id&&!/^\d+$/.test(id)){$("#amsg").textContent="Badge ID must contain numbers only.";return}S.badges[i].id=id||null;save();render();if(id)loadIcons([id]);$("#amsg").textContent=id?`Saved badge ID ${id}. Loading its Roblox icon…`:"Badge ID removed."}
   if(t.dataset.deleteBadge!=null){
     if(!S.admin)return;
@@ -845,7 +843,7 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.dataset.f){S.f=t.dataset.f;document.querySelectorAll("#flt button").forEach(b=>b.classList.toggle("on",b===t));render()}
   if(t.dataset.t){S.tab=t.dataset.t;document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b===t));render()}});
 document.addEventListener("change",e=>{const t=e.target;if(t.dataset.tier!=null){const i=+t.dataset.tier;S.badges[i].t=t.value===""?null:Number(t.value);save();render();$("#amsg").textContent="Tier saved."}});
-document.addEventListener("keydown",e=>{if(e.key=="Enter"&&e.target.dataset.in!=null){addVictor(+e.target.dataset.in,e.target.value);render()}if(e.key=="Enter"&&e.target.dataset.bid!=null){const i=+e.target.dataset.bid;document.querySelector(`[data-saveid="${i}"]`).click()}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.bid!=null){const i=+e.target.dataset.bid;document.querySelector(`[data-saveid="${i}"]`).click()}});
 $("#q").oninput=e=>{S.q=e.target.value;render()};
 $("#adm").onclick=async e=>{const btn=e.currentTarget,want=!S.admin;
   if(window.LIVE&&want){if(!(await window.fbLogin())){$("#amsg").textContent="That Google account isn't the admin.";$("#apanel").classList.add("show");return}}
@@ -919,12 +917,16 @@ function updateAccountUI(user,profile){
   setText("#accountWelcome",`Welcome back, ${displayName}`);setText("#accountEmailLabel",email||"Your UHBL account");
   setText("#settingsEmail",email||"No email address is associated with this account.");
   setText("#settingsProviders",providers.map(p=>p==="password"?"Email and password":p==="google.com"?"Google":"Other provider").join(" · ")||"No sign-in provider information available.");
-  if(start)start.disabled=!isSignedIn||!!profile?.linkedRoblox;
+  if(start)start.disabled=!isSignedIn||!!profile?.linkedRoblox||!String(name?.value||"").trim();
   if(sync)sync.disabled=!isSignedIn||!profile?.linkedRoblox?.linkToken;
   if(linkGoogle)linkGoogle.style.display=isSignedIn&&!providers.includes("google.com")?"inline-block":"none";
   if(resend)resend.style.display=isSignedIn&&providers.includes("password")&&!user.emailVerified?"inline-block":"none";
-  if(name&&profile?.linkedRoblox?.username){name.value=profile.linkedRoblox.username;name.disabled=true}
-  else if(name){name.disabled=!isSignedIn;if(!isSignedIn)name.value=""}
+  if(name){
+    const linked=!!profile?.linkedRoblox?.username;
+    name.disabled=linked;
+    name.readOnly=linked;
+    if(linked)name.value=profile.linkedRoblox.username;
+  }
   const progress=profile?.progress||{};const entries=Object.values(progress);
   setText("#accountBadgeStat",String(entries.length));
   setText("#accountVerifiedStat",String(entries.filter(v=>v?.verified===true).length));
@@ -1063,9 +1065,14 @@ async function publishMyPublicProfile(profile){
     legacyCount:entries.filter(([,v])=>v&&v.source==="legacy"&&!v.verified).length,
     earnedBadgeKeys:entries.map(([k])=>k),
     verifiedBadgeKeys:entries.filter(([,v])=>v&&v.verified===true).map(([k])=>k),
+    verifiedEarnedAt:Object.fromEntries(entries.filter(([,v])=>v&&v.verified===true&&v.earnedAt).map(([k,v])=>[k,v.earnedAt])),
     updatedAt:Date.now(),
   };
   await window.fbSavePublicProfile(data);
+  const index=S.publicProfiles.findIndex(p=>p.uid===data.uid);
+  if(index>=0)S.publicProfiles[index]=data;else S.publicProfiles.push(data);
+  render();
+  return data;
 }
 async function syncRobloxBadges(){
   const profile=S.profileData,link=profile?.linkedRoblox;
@@ -1091,7 +1098,7 @@ async function syncRobloxBadges(){
     const next={...profile,progress,lastInventorySync:new Date().toISOString(),lastInventoryCount:items.length};
     await window.fbSaveUserProfile(next);await publishMyPublicProfile(next);
     S.profileData=next;S.myProgress=progress;render();
-    robloxStatus(`Sync complete for your linked account @${link.username}. Roblox returned ${items.length} owned badges; ${matched} matched tracked UHBL badges; ${added} new or newly verified personal records.${data.truncated?" The API page limit was reached, so this result may be incomplete.":""} Existing community victors were not changed.`);
+    robloxStatus(`Sync complete for @${link.username}. Roblox returned ${items.length} owned badges; ${matched} matched tracked UHBL badges; ${added} were newly verified for your profile. Your username is now included automatically in the global victor lists for those badges.${data.truncated?" The API page limit was reached, so this result may be incomplete.":""}`);
   }catch(error){robloxStatus(`Badge sync failed: ${error.message}`)}
   finally{button.disabled=!S.profileData?.linkedRoblox?.linkToken;button.textContent="Sync my badges"}
 }
@@ -1155,6 +1162,11 @@ $("#passwordReset").addEventListener("click",async()=>{
 $("#linkGoogle").addEventListener("click",async()=>{try{await window.fbLinkGoogle();accountStatus("Google has been linked to this UHBL account. You can now sign in either way.")}catch(e){showAuthError("Could not link Google",e)}});
 $("#resendVerification").addEventListener("click",async()=>{try{await window.fbResendVerification();accountStatus("Verification email sent again. Check your inbox.")}catch(e){showAuthError("Could not resend verification email",e)}});
 $("#accountLogout").addEventListener("click",async()=>{try{await window.fbProfileSignOut()}catch(e){accountStatus(`Sign-out failed: ${e.message}`)}});
+$("#robloxUsername").addEventListener("input",()=>{
+  const linked=!!linkedProfile();
+  const button=$("#robloxLinkStart");
+  if(button)button.disabled=!S.profileUid||linked||!$("#robloxUsername").value.trim();
+});
 $("#robloxLinkStart").addEventListener("click",startRobloxLink);
 $("#robloxVerifyLink").addEventListener("click",verifyRobloxLink);
 $("#robloxSync").addEventListener("click",syncRobloxBadges);
@@ -1194,7 +1206,7 @@ if(C){
   window.fbSaveUserProfile=async data=>{if(!au.currentUser||!data||data.firebaseUid!==au.currentUser.uid)throw new Error("You can only save your own UHBL profile.");await setDoc(userRef(au.currentUser.uid),{...data,updatedAt:Date.now()},{merge:true})};
   window.fbSavePublicProfile=async data=>{if(!au.currentUser||!data||data.uid!==au.currentUser.uid)throw new Error("You can only publish your own player profile.");await setDoc(publicRef(au.currentUser.uid),{...data,updatedAt:Date.now()},{merge:true})};
   onSnapshot(legacyRef,s=>window.applyRemote(s.exists()?s.data().badges||{}:{}),e=>{console.error("Community state listener:",e);window.applyRemote({})});
-  onSnapshot(collection(db,"publicProfiles"),snap=>{const S=window.UHBL_APP_STATE;S.publicProfiles=snap.docs.map(d=>({uid:d.id,...d.data()}));if(S.tab==="pr")render();},e=>console.error("Public profiles listener:",e));
+  onSnapshot(collection(db,"publicProfiles"),snap=>{const S=window.UHBL_APP_STATE;S.publicProfiles=snap.docs.map(d=>({uid:d.id,...d.data()}));render();},e=>console.error("Public profiles listener:",e));
   onAuthStateChanged(au,async user=>{
     window.UHBL_FIREBASE_USER=user||null;
     const S=window.UHBL_APP_STATE;
