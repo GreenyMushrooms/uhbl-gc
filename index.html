@@ -412,19 +412,102 @@ window.applyRemote=d=>{
   render();loadIcons();
 };
 const TL=t=>t==null?"":t===0?"ENTRY LEVEL":"★".repeat(t)+" "+t+(t===1?" STAR":" STARS");
-const IMG={};try{Object.assign(IMG,JSON.parse(localStorage.getItem("uhblimg")||"{}"))}catch(e){}
-let iconBusy=false,iconQueued=false;
-async function loadIcons(){if(iconBusy){iconQueued=true;return}const ids=S.badges.filter(b=>b.id&&!IMG[b.id]).map(b=>b.id);if(!ids.length)return;iconBusy=true;let add=0;
-  for(let i=0;i<ids.length;i+=100){try{const d=await jget(`${thumbnailHost}/v1/badges/icons?badgeIds=${ids.slice(i,i+100).join(",")}&size=150x150&format=Png&isCircular=false`);
-    (d.data||[]).forEach(x=>{if(x.imageUrl&&x.state=="Completed"){IMG[x.targetId]=x.imageUrl;add++}})}catch(e){}}
-  try{localStorage.setItem("uhblimg",JSON.stringify(IMG))}catch(e){}
-  iconBusy=false;if(add)render();if(iconQueued){iconQueued=false;loadIcons()}}
+// Roblox's public badge-thumbnail API. Cached images are shown immediately while
+// the cache is refreshed in the background and pending thumbnails are retried.
+const thumbnailHost="https://thumbnails.roblox.com";
+const ICON_RETRY_MS=60*1000;          // Retry pending/unavailable thumbnails once a minute.
+const ICON_REFRESH_MS=24*60*60*1000; // Refresh completed thumbnail URLs daily.
+const ICON_ERROR_RETRY_MS=5*60*1000;
+const IMG={};
+const ICON_NEXT_CHECK={};
+const ICON_REJECTED={};
+try{Object.assign(IMG,JSON.parse(localStorage.getItem("uhblimg")||"{}"))}catch(e){}
+try{Object.assign(ICON_NEXT_CHECK,JSON.parse(localStorage.getItem("uhblimg_next")||"{}"))}catch(e){}
+try{Object.assign(ICON_REJECTED,JSON.parse(localStorage.getItem("uhblimg_rejected")||"{}"))}catch(e){}
+let iconBusy=false,iconQueued=false,iconTimer=null;
+const iconForceQueue=new Set();
+function persistIconCache(){
+  try{
+    localStorage.setItem("uhblimg",JSON.stringify(IMG));
+    localStorage.setItem("uhblimg_next",JSON.stringify(ICON_NEXT_CHECK));
+    localStorage.setItem("uhblimg_rejected",JSON.stringify(ICON_REJECTED));
+  }catch(e){}
+}
+function scheduleIconRefresh(){
+  if(iconTimer)clearTimeout(iconTimer);
+  const ids=[...new Set(S.badges.map(b=>String(b.id||"")).filter(id=>/^\d+$/.test(id)))];
+  if(!ids.length)return;
+  const now=Date.now();
+  const next=Math.min(...ids.map(id=>Number(ICON_NEXT_CHECK[id])||now));
+  iconTimer=setTimeout(()=>loadIcons(),Math.max(15000,Math.min(next-now,60*60*1000)));
+}
+async function loadIcons(forceIds=[]){
+  (Array.isArray(forceIds)?forceIds:[forceIds]).forEach(id=>{if(id&&/^\d+$/.test(String(id))){iconForceQueue.add(String(id));ICON_NEXT_CHECK[String(id)]=0}});
+  if(iconBusy){iconQueued=true;return}
+  const now=Date.now();
+  const ids=[...new Set(S.badges.map(b=>String(b.id||"")).filter(id=>/^\d+$/.test(id)))];
+  const due=ids.filter(id=>iconForceQueue.has(id)||(Number(ICON_NEXT_CHECK[id])||0)<=now);
+  if(!due.length){scheduleIconRefresh();return}
+  iconBusy=true;
+  let changed=false;
+  due.forEach(id=>iconForceQueue.delete(id));
+  try{
+    for(let i=0;i<due.length;i+=100){
+      const batch=due.slice(i,i+100);
+      try{
+        const url=`${thumbnailHost}/v1/badges/icons?badgeIds=${encodeURIComponent(batch.join(","))}&size=150x150&format=Png&isCircular=false`;
+        const result=await jget(url,{cache:"no-store"});
+        const byId=new Map((Array.isArray(result.data)?result.data:[]).map(item=>[String(item.targetId),item]));
+        const checkedAt=Date.now();
+        batch.forEach(id=>{
+          const item=byId.get(id);
+          if(item&&item.state==="Completed"&&typeof item.imageUrl==="string"&&item.imageUrl){
+            if(ICON_REJECTED[id]===item.imageUrl){
+              // Don't immediately reuse a URL that the browser already failed to load.
+              ICON_NEXT_CHECK[id]=checkedAt+ICON_ERROR_RETRY_MS;
+            }else{
+              if(IMG[id]!==item.imageUrl){IMG[id]=item.imageUrl;changed=true}
+              delete ICON_REJECTED[id];
+              ICON_NEXT_CHECK[id]=checkedAt+ICON_REFRESH_MS;
+            }
+          }else{
+            // Roblox can return Pending/InReview before the badge thumbnail is ready.
+            ICON_NEXT_CHECK[id]=checkedAt+(item&&item.state==="Blocked"?ICON_REFRESH_MS:item&&item.state==="Error"?ICON_ERROR_RETRY_MS:ICON_RETRY_MS);
+          }
+        });
+      }catch(err){
+        const retryAt=Date.now()+ICON_ERROR_RETRY_MS;
+        batch.forEach(id=>ICON_NEXT_CHECK[id]=retryAt);
+      }
+    }
+  }finally{
+    persistIconCache();
+    iconBusy=false;
+    if(changed)render();
+    if(iconQueued||iconForceQueue.size){iconQueued=false;loadIcons([...iconForceQueue]);}
+    else scheduleIconRefresh();
+  }
+}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const key=n=>String(n??"").normalize("NFKC").replace(/\s+/g," ").trim().toLocaleLowerCase();
 function first(b){if(!b.victors.length)return null;const d=b.victors.filter(v=>v.d).sort((a,c)=>a.d<c.d?-1:1);return d.length?d[0]:b.victors[0]}
-function icon(b){if(b.id&&IMG[b.id])return `<img src="${esc(IMG[b.id])}" alt="Roblox badge icon" loading="lazy">`;let h=0;for(const c of b.name)h=(h*31+c.charCodeAt(0))%360;const ini=b.name.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
+function icon(b){if(b.id&&IMG[b.id])return `<img data-badge-icon="${esc(b.id)}" src="${esc(IMG[b.id])}" alt="Roblox badge icon" loading="lazy">`;let h=0;for(const c of b.name)h=(h*31+c.charCodeAt(0))%360;const ini=b.name.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
 return `<svg viewBox="0 0 64 64"><polygon points="32,2 60,18 60,46 32,62 4,46 4,18" fill="hsl(${h},80%,18%)" stroke="hsl(${h},90%,60%)" stroke-width="2.5"/><text x="32" y="40" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="sans-serif">${esc(ini)}</text></svg>`}
+// If a previously cached URL stops working, fall back to the generated icon and
+// ask Roblox for a replacement. Use capture because image error events do not bubble.
+document.addEventListener("error",e=>{
+  const img=e.target;
+  if(!img||!img.dataset||!img.dataset.badgeIcon)return;
+  const id=String(img.dataset.badgeIcon),badUrl=IMG[id];
+  if(!badUrl)return;
+  ICON_REJECTED[id]=badUrl;
+  delete IMG[id];
+  ICON_NEXT_CHECK[id]=0;
+  persistIconCache();
+  render();
+  loadIcons([id]);
+},true);
 function knownVictorNames(){
   const names=new Map();
   S.badges.forEach(b=>b.victors.forEach(v=>{
@@ -509,7 +592,7 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.dataset.rs!=null){S.rs=t.dataset.rs;S.roll=null;render()}
   if(t.dataset.roll)doRoll();
   if(t.dataset.add!=null){const inp=document.querySelector(`[data-in="${t.dataset.add}"]`);addVictor(+t.dataset.add,inp.value);render()}
-  if(t.dataset.saveid!=null){const i=+t.dataset.saveid,inp=document.querySelector(`[data-bid="${i}"]`),id=inp.value.trim();if(id&&!/^\d+$/.test(id)){$("#amsg").textContent="Badge ID must contain numbers only.";return}S.badges[i].id=id||null;save();render();loadIcons();$("#amsg").textContent=id?`Saved badge ID ${id}. Loading its Roblox icon…`:"Badge ID removed."}
+  if(t.dataset.saveid!=null){const i=+t.dataset.saveid,inp=document.querySelector(`[data-bid="${i}"]`),id=inp.value.trim();if(id&&!/^\d+$/.test(id)){$("#amsg").textContent="Badge ID must contain numbers only.";return}S.badges[i].id=id||null;save();render();if(id)loadIcons([id]);$("#amsg").textContent=id?`Saved badge ID ${id}. Loading its Roblox icon…`:"Badge ID removed."}
   if(t.dataset.deleteBadge!=null){
     if(!S.admin)return;
     const i=Number(t.dataset.deleteBadge),b=S.badges[i];
@@ -539,13 +622,10 @@ $("#createBadge").onclick=()=>{
   S.badges.push(badge);save();
   $("#newGame").value="";$("#newBadgeName").value="";$("#newBadgeId").value="";$("#newBadgeTier").value="";
   S.tab="tr";document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t==="tr"));
-  render();loadIcons();$("#amsg").textContent=`Created ${name} in ${game}.`;
+  render();if(id)loadIcons([id]);$("#amsg").textContent=`Created ${name} in ${game}.`;
 };
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function jget(url){for(let a=0;a<4;a++){const r=await fetch(url);if(r.status==429){await sleep(2500*(a+1));continue}if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}throw new Error("rate limited")}
-// ---- Roblox badge icon lookup ----
-const thumbnailHost="https://thumbnails.roproxy.com";
-
+async function jget(url,options={}){for(let a=0;a<4;a++){const r=await fetch(url,options);if(r.status==429){await sleep(2500*(a+1));continue}if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}throw new Error("rate limited")}
 // ---- background ----
 const cv=$("#bg"),cx=cv.getContext("2d");let W,H,P=[];
 function size(){W=cv.width=innerWidth;H=cv.height=innerHeight;P=Array.from({length:Math.min(70,W/18|0)},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,vx:(Math.random()-.5)*.25,vy:-Math.random()*.35-.05}))}
