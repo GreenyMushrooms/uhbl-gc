@@ -132,6 +132,11 @@ body.account-modal-open{overflow:hidden}
 .auth-box .profile-actions button{min-height:39px}
 .auth-box .auth-primary{background:var(--ok);border-color:var(--ok);color:#031003}
 .auth-box .auth-primary:hover{background:#b4ff9f}
+.auth-optional-notice{padding:14px;border:1px solid rgba(57,255,20,.48);background:linear-gradient(110deg,rgba(57,255,20,.10),rgba(0,229,255,.035));}
+.auth-optional-notice strong{display:block;color:var(--ok);font-size:13px;font-weight:900;letter-spacing:.10em;margin-bottom:6px}
+.auth-optional-notice p{margin:0;color:#d8e2d8;font-size:12px;line-height:1.55}
+.auth-anonymous-action{width:100%;min-height:48px;font-size:14px;letter-spacing:.06em}
+.auth-box .auth-divider{margin:1px 0}
 .auth-divider{display:flex;align-items:center;gap:10px;color:#687268;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
 .auth-divider:before,.auth-divider:after{content:"";height:1px;background:#293029;flex:1}
 .roblox-connect{width:100%;border:1px solid #2b382d;padding:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:4px;background:linear-gradient(145deg,#0c120d,#080b09)}
@@ -341,17 +346,23 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
           <p class="account-page-subtitle">Your personal progress, Roblox link and settings stay attached to your UHBL account.</p>
           <div class="auth-box" id="authBox">
             <div class="auth-mode-switch"><button id="authModeLogin" class="active" type="button">Log in</button><button id="authModeSignup" type="button">Create account</button></div>
+            <div class="auth-optional-notice">
+              <strong>EMAIL IS COMPLETELY OPTIONAL</strong>
+              <p>You can create and use a UHBL account without entering an email address or password. This is the main sign-up option.</p>
+            </div>
+            <button id="anonymousLogin" class="auth-primary auth-anonymous-action" type="button">Continue without email</button>
+            <div class="auth-divider">OR, OPTIONALLY USE EMAIL + PASSWORD</div>
             <div class="auth-grid">
-              <label class="field"><span class="lab">Email address</span><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" maxlength="254"></label>
-              <label class="field"><span class="lab">Password</span><input id="authPassword" type="password" placeholder="At least 8 characters" autocomplete="current-password" minlength="8" maxlength="128"></label>
+              <label class="field"><span class="lab">Email address (optional)</span><input id="authEmail" type="email" placeholder="Only needed for email sign-in" autocomplete="email" maxlength="254"></label>
+              <label class="field"><span class="lab">Password (only needed with email)</span><input id="authPassword" type="password" placeholder="At least 8 characters" autocomplete="current-password" minlength="8" maxlength="128"></label>
             </div>
             <div class="profile-actions">
-              <button id="emailSignup" class="auth-primary" type="button" style="display:none">Create account</button>
-              <button id="emailLogin" class="auth-primary" type="button">Log in</button>
+              <button id="emailSignup" class="auth-primary" type="button" style="display:none">Create account with email</button>
+              <button id="emailLogin" class="auth-primary" type="button">Log in with email</button>
               <button id="googleLogin" type="button">Continue with Google</button>
               <button id="passwordReset" type="button">Forgot password?</button>
             </div>
-            <div class="profile-help">Google is optional. You can register with an email address and password. New email/password accounts receive a verification email.</div>
+            <div class="profile-help">Email/password and Google are optional alternatives. An email-free account is anonymous and stays available in this browser while you remain signed in. If you sign out or clear this browser's data before linking Google in Account settings, the anonymous account cannot be recovered; choosing Continue without email again will create a new account.</div>
           </div>
         </section>
         <section class="account-page" id="accountOverviewPage" data-account-page="overview">
@@ -382,14 +393,14 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
           <h2 class="account-page-title">Account settings</h2>
           <p class="account-page-subtitle">Manage how you sign in and protect access to your UHBL profile.</p>
           <div class="account-settings-list">
-            <div class="account-settings-row"><strong>Email address</strong><p id="settingsEmail">Your account email will appear here.</p></div>
+            <div class="account-settings-row"><strong>Email address</strong><p id="settingsEmail">Email is optional. You can use UHBL without an email address.</p></div>
             <div class="account-settings-row"><strong>Sign-in methods</strong><p id="settingsProviders">Loading sign-in methods…</p><div class="account-settings-actions" id="signedInActions" style="display:none"><button id="linkGoogle" type="button" style="display:none">Link Google to this account</button><button id="resendVerification" type="button" style="display:none">Resend verification email</button><button id="accountLogout" type="button" class="danger">Sign out</button></div></div>
             <div class="account-settings-row"><strong>Personal data</strong><p>Your personal badge progress is stored under your Firebase user ID. Public player profiles show achievement information, not your password or private login details.</p></div>
           </div>
         </section>
       </div>
     </div>
-    <div class="account-status" id="accountStatus" aria-live="polite">Create an account with email/password, or continue with Google. Both methods create a private UHBL profile.</div>
+    <div class="account-status" id="accountStatus" aria-live="polite">EMAIL IS OPTIONAL: continue without email to create a private UHBL account, or optionally use email/password or Google.</div>
   </section>
 </div>
 <main>
@@ -1104,7 +1115,7 @@ function openAccountModal(section="overview",authMode=null){
   modal.classList.add("open");modal.setAttribute("aria-hidden","false");document.body.classList.add("account-modal-open");
   setAccountSection(section);
   closeAccountDropdown();
-  setTimeout(()=>{const focus=section==="auth"?$("#authEmail"):$("#closeAccountModal");focus?.focus?.()},30);
+  setTimeout(()=>{const focus=section==="auth"?$("#anonymousLogin"):$("#closeAccountModal");focus?.focus?.()},30);
 }
 function closeAccountModal(){const modal=$("#accountModal");if(!modal)return;modal.classList.remove("open");modal.setAttribute("aria-hidden","true");document.body.classList.remove("account-modal-open")}
 function closeAccountDropdown(){const wrap=$("#accountWrap"),trigger=$("#accountTrigger");wrap?.classList.remove("open");trigger?.setAttribute("aria-expanded","false")}
@@ -1113,7 +1124,7 @@ function updateAccountUI(user,profile){
   const guestMenu=$("#accountGuestMenu"),userMenu=$("#accountUserMenu"),triggerLabel=$("#accountTriggerLabel"),avatar=$("#accountAvatar"),email=user?.email||"";
   const providers=user?.providerData?.map(p=>p.providerId)||[];
   const isSignedIn=!!user;
-  const displayName=user?.displayName||email.split("@")[0]||"UHBL Player";
+  const displayName=user?.displayName||email.split("@")[0]||(user?.isAnonymous?"UHBL Guest":"UHBL Player");
   const initials=initialsFor(displayName);
   if(authBox)authBox.style.display=isSignedIn?"none":"flex";
   if(signedIn)signedIn.style.display=isSignedIn?"flex":"none";
@@ -1123,11 +1134,11 @@ function updateAccountUI(user,profile){
   if(avatar)avatar.textContent=initials;
   [$("#accountSideAvatar"),$("#accountHeroAvatar")].forEach(el=>{if(el)el.textContent=initials});
   const setText=(selector,text)=>{const el=$(selector);if(el)el.textContent=text};
-  setText("#accountMenuName",displayName);setText("#accountMenuEmail",email||"Signed in to UHBL");
-  setText("#accountSideName",displayName);setText("#accountSideEmail",email);
-  setText("#accountWelcome",`Welcome back, ${displayName}`);setText("#accountEmailLabel",email||"Your UHBL account");
-  setText("#settingsEmail",email||"No email address is associated with this account.");
-  setText("#settingsProviders",providers.map(p=>p==="password"?"Email and password":p==="google.com"?"Google":"Other provider").join(" · ")||"No sign-in provider information available.");
+  setText("#accountMenuName",displayName);setText("#accountMenuEmail",email||(user?.isAnonymous?"Anonymous account · no email":"Signed in to UHBL"));
+  setText("#accountSideName",displayName);setText("#accountSideEmail",email||(user?.isAnonymous?"Anonymous account · no email":""));
+  setText("#accountWelcome",`Welcome back, ${displayName}`);setText("#accountEmailLabel",email||(user?.isAnonymous?"No email linked — email is optional":"Your UHBL account"));
+  setText("#settingsEmail",email||(user?.isAnonymous?"No email address is linked. This anonymous UHBL account does not require one.":"No email address is associated with this account."));
+  setText("#settingsProviders",providers.map(p=>p==="password"?"Email and password":p==="google.com"?"Google":"Other provider").join(" · ")||(user?.isAnonymous?"Anonymous sign-in · no email":"No sign-in provider information available."));
   if(start)start.disabled=!isSignedIn||!!profile?.linkedRoblox||!String(name?.value||"").trim();
   if(sync)sync.disabled=!isSignedIn||!profile?.linkedRoblox?.linkToken;
   if(linkGoogle)linkGoogle.style.display=isSignedIn&&!providers.includes("google.com")?"inline-block":"none";
@@ -1153,7 +1164,7 @@ function updateAccountUI(user,profile){
     robloxStatus(isSignedIn?"No Roblox account linked yet. Enter your Roblox user ID to start ownership verification.":"Sign in first, then prove ownership of your Roblox account.");
     if(start)start.textContent="Start ownership verification";
   }
-  accountStatus(isSignedIn?`Signed in as ${displayName}. Your personal progress is private to this Firebase account.`:"Create an account with email/password, or continue with Google. Both methods create a private UHBL profile.");
+  accountStatus(isSignedIn?(user?.isAnonymous?`Signed in as ${displayName} without an email. Email is optional. Link Google in Account settings before changing devices or signing out if you need to recover this anonymous account.`:`Signed in as ${displayName}. Your personal progress is private to this Firebase account.`):"EMAIL IS COMPLETELY OPTIONAL. Continue without email to create a UHBL account, or optionally use email/password or Google.");
   if($("#accountModal")?.classList.contains("open")){
     const activePage=document.querySelector("[data-account-page].active")?.dataset.accountPage;
     if(!isSignedIn)setAccountSection("auth");
@@ -1164,10 +1175,11 @@ function setAuthMode(mode="login"){
   const signup=mode==="signup";
   $("#authModeLogin")?.classList.toggle("active",!signup);
   $("#authModeSignup")?.classList.toggle("active",signup);
-  const loginButton=$("#emailLogin"),signupButton=$("#emailSignup"),reset=$("#passwordReset"),heading=$("#authHeading"),password=$("#authPassword");
+  const loginButton=$("#emailLogin"),signupButton=$("#emailSignup"),reset=$("#passwordReset"),heading=$("#authHeading"),password=$("#authPassword"),anonymousButton=$("#anonymousLogin");
   if(loginButton)loginButton.style.display=signup?"none":"inline-block";
   if(signupButton)signupButton.style.display=signup?"inline-block":"none";
   if(reset)reset.style.display=signup?"none":"inline-block";
+  if(anonymousButton)anonymousButton.textContent=signup?"Create account without email":"Continue without email";
   if(heading)heading.textContent=signup?"Create your UHBL account":"Log in to UHBL";
   if(password)password.autocomplete=signup?"new-password":"current-password";
   window.UHBL_AUTH_MODE=signup?"signup":"login";
@@ -1434,6 +1446,7 @@ function showAuthError(action,error){
     "auth/email-already-in-use":"An account already uses this email. Try logging in instead.",
     "auth/invalid-email":"Enter a valid email address.",
     "auth/weak-password":"Choose a stronger password (at least 8 characters).",
+    "auth/operation-not-allowed":"Email-free sign-in is not enabled yet. In Firebase Console, open Authentication → Sign-in method and enable Anonymous.",
     "auth/invalid-credential":"Email or password is incorrect.",
     "auth/user-not-found":"No account was found for this email. Create an account first.",
     "auth/wrong-password":"Email or password is incorrect.",
@@ -1466,15 +1479,25 @@ $("#authModeSignup").addEventListener("click",()=>setAuthMode("signup"));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeAccountDropdown();closeAccountModal()}});
 setAuthMode("login");
 
+$("#anonymousLogin").addEventListener("click",async()=>{
+  const button=$("#anonymousLogin");
+  if(button)button.disabled=true;
+  try{
+    await window.fbAnonymousSignIn();
+    $("#authPassword").value="";
+    accountStatus("UHBL account created without an email address. Your account is anonymous. Link Google in Account settings before changing devices or signing out if you need account recovery.");
+  }catch(e){showAuthError("Email-free sign-in failed",e)}
+  finally{if(button)button.disabled=false}
+});
 $("#emailSignup").addEventListener("click",async()=>{
   const email=authEmail(),password=authPassword();
-  if(!email||password.length<8){accountStatus("Enter a valid email and a password with at least 8 characters.");return}
+  if(!email||password.length<8){accountStatus("Email is optional. To create an email/password account, enter a valid email and a password with at least 8 characters. Otherwise use the main 'Create account without email' button.");return}
   try{await window.fbEmailSignUp(email,password);$("#authPassword").value="";accountStatus("Account created! A verification email has been sent. You can start setting up your UHBL profile now.")}
   catch(e){showAuthError("Sign-up failed",e)}
 });
 $("#emailLogin").addEventListener("click",async()=>{
   const email=authEmail(),password=authPassword();
-  if(!email||!password){accountStatus("Enter your email and password.");return}
+  if(!email||!password){accountStatus("Email is optional. To log in with email, enter both your email and password. To create an email-free account, use the main 'Continue without email' button.");return}
   try{await window.fbEmailSignIn(email,password);$("#authPassword").value=""}
   catch(e){showAuthError("Login failed",e)}
 });
@@ -1516,12 +1539,13 @@ frame();render();loadIcons();
 const C=window.FB_CFG;
 if(C){
   const B="https://www.gstatic.com/firebasejs/10.12.2/";
-  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,getDoc,collection},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendPasswordResetEmail,sendEmailVerification,linkWithPopup}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
+  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,getDoc,collection},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInAnonymously,sendPasswordResetEmail,sendEmailVerification,linkWithPopup}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
   const app=initializeApp(C),db=getFirestore(app),au=getAuth(app),legacyRef=doc(db,"uhbl","state");
   const userRef=uid=>doc(db,"users",uid);
   const publicRef=uid=>doc(db,"publicProfiles",uid);
   window.LIVE=true;
   window.fbSave=r=>{if(window.ADMIN_UID&&au.currentUser&&au.currentUser.uid===window.ADMIN_UID)setDoc(legacyRef,{badges:r,updated:Date.now()},{merge:true}).catch(e=>alert("Community save failed: "+e.message))};
+  window.fbAnonymousSignIn=async()=>(await signInAnonymously(au)).user;
   window.fbEmailSignUp=async(email,password)=>{const credential=await createUserWithEmailAndPassword(au,email,password);try{await sendEmailVerification(credential.user)}catch(error){console.warn("Verification email could not be sent:",error)}return credential.user};
   window.fbEmailSignIn=async(email,password)=>(await signInWithEmailAndPassword(au,email,password)).user;
   window.fbGoogleSignIn=async()=>{const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});return (await signInWithPopup(au,provider)).user};
