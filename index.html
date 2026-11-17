@@ -757,7 +757,17 @@ function scheduleIconRefresh(){
   iconTimer=setTimeout(()=>loadIcons(),Math.max(15000,Math.min(next-now,60*60*1000)));
 }
 async function loadIcons(forceIds=[]){
-  (Array.isArray(forceIds)?forceIds:[forceIds]).forEach(id=>{if(id&&/^\d+$/.test(String(id))){iconForceQueue.add(String(id));ICON_NEXT_CHECK[String(id)]=0}});
+  // An explicit refresh (startup for newly-added badges, manual ID save, etc.)
+  // must also clear an old failed-thumbnail marker. Otherwise a stale
+  // ICON_REJECTED entry can suppress the very same Roblox URL forever.
+  (Array.isArray(forceIds)?forceIds:[forceIds]).forEach(id=>{
+    if(id&&/^\d+$/.test(String(id))){
+      const badgeId=String(id);
+      iconForceQueue.add(badgeId);
+      ICON_NEXT_CHECK[badgeId]=0;
+      delete ICON_REJECTED[badgeId];
+    }
+  });
   if(iconBusy){iconQueued=true;return}
   const now=Date.now();
   const ids=[...new Set(S.badges.map(b=>String(b.id||"")).filter(id=>/^\d+$/.test(id)))];
@@ -777,14 +787,12 @@ async function loadIcons(forceIds=[]){
         batch.forEach(id=>{
           const item=byId.get(id);
           if(item&&item.state==="Completed"&&typeof item.imageUrl==="string"&&item.imageUrl){
-            if(ICON_REJECTED[id]===item.imageUrl){
-              // Don't immediately reuse a URL that the browser already failed to load.
-              ICON_NEXT_CHECK[id]=checkedAt+ICON_ERROR_RETRY_MS;
-            }else{
-              if(IMG[id]!==item.imageUrl){IMG[id]=item.imageUrl;changed=true}
-              delete ICON_REJECTED[id];
-              ICON_NEXT_CHECK[id]=checkedAt+ICON_REFRESH_MS;
-            }
+            // A Roblox thumbnail URL may fail transiently. Once this badge is
+            // due for a retry (or explicitly force-refreshed), accept the API's
+            // current URL again instead of permanently blacklisting it.
+            if(IMG[id]!==item.imageUrl){IMG[id]=item.imageUrl;changed=true}
+            delete ICON_REJECTED[id];
+            ICON_NEXT_CHECK[id]=checkedAt+ICON_REFRESH_MS;
           }else{
             // Roblox can return Pending/InReview before the badge thumbnail is ready.
             ICON_NEXT_CHECK[id]=checkedAt+(item&&item.state==="Blocked"?ICON_REFRESH_MS:item&&item.state==="Error"?ICON_ERROR_RETRY_MS:ICON_RETRY_MS);
@@ -853,10 +861,12 @@ document.addEventListener("error",e=>{
   if(!badUrl)return;
   ICON_REJECTED[id]=badUrl;
   delete IMG[id];
-  ICON_NEXT_CHECK[id]=0;
+  // Don't immediately retry the same failed URL in a tight loop. The next
+  // scheduled refresh will ask Roblox for a fresh URL after the cooldown.
+  ICON_NEXT_CHECK[id]=Date.now()+ICON_ERROR_RETRY_MS;
   persistIconCache();
   render();
-  loadIcons([id]);
+  scheduleIconRefresh();
 },true);
 function stats(){const tot={},fc={};S.badges.forEach(b=>{getGlobalVictors(b).forEach(v=>tot[v.n]=(tot[v.n]||0)+1);const f=first(b);if(f)fc[f.n]=(fc[f.n]||0)+1});
 const srt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return{tot:srt(tot),fc:srt(fc)}}
