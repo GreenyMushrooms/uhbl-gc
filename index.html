@@ -834,22 +834,37 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const key=n=>String(n??"").normalize("NFKC").replace(/\s+/g," ").trim().toLocaleLowerCase();
 const plansForBadge=b=>S.plannedByBadge[bk(b)]||[];
 const myPlanForBadge=b=>plansForBadge(b).find(p=>p.uid===S.profileUid)||null;
+// Only the current player's own Roblox-verified progress counts as ownership
+// for planned-badge eligibility. Community victors and other players' clears
+// must never prevent someone else from planning the badge.
+const personallyOwnsBadge=b=>{
+  const progress=S.profileData?.progress||S.myProgress||{};
+  return progress[bk(b)]?.verified===true;
+};
 function renderPlannedBadge(b){
   const badgeKey=bk(b),plans=plansForBadge(b).slice().sort((a,c)=>(Number(c.updatedAt)||0)-(Number(a.updatedAt)||0));
-  const mine=myPlanForBadge(b),open=S.planOpenKey===badgeKey;
+  const mine=myPlanForBadge(b),open=S.planOpenKey===badgeKey,owned=personallyOwnsBadge(b);
   const dataKey=esc(badgeKey);
   const people=plans.length?plans.map(plan=>{
     const name=plan.robloxUsername?`@${plan.robloxUsername}`:(plan.displayName||"UHBL Player");
     const sub=plan.robloxUsername&&plan.displayName&&plan.displayName!==plan.robloxUsername?esc(plan.displayName):"";
     return `<div class="plan-person"><div class="plan-person-name">${esc(name)}</div>${sub?`<div class="plan-person-handle">${sub}</div>`:""}<div class="plan-person-note">${plan.note?esc(plan.note):`<span class="plan-empty">No note added.</span>`}</div></div>`;
   }).join(""):`<div class="plan-empty">Nobody has planned this badge yet.</div>`;
-  const editor=S.profileUid?`<div class="plan-edit"><div class="plan-panel-title">${mine?"Your note":"Add your plan"}</div><textarea maxlength="500" data-plan-note placeholder="Optional note for the community (500 characters max)...">${mine?esc(mine.note||""):""}</textarea><div class="plan-edit-actions"><button type="button" data-plan-save="${dataKey}">${mine?"Save changes":"Plan this badge"}</button>${mine?`<button type="button" class="danger" data-plan-remove="${dataKey}">Remove my plan</button>`:""}</div><div class="plan-notice">Your plan and note are public and visible to everyone.</div></div>`:`<div class="plan-notice">Sign in to add your own plan and note. Existing plans are public.</div>`;
+  let editor;
+  if(!S.profileUid){
+    editor=`<div class="plan-notice">Sign in to add your own plan and note. Existing plans are public.</div>`;
+  }else if(owned){
+    editor=`<div class="plan-notice">You already own this badge (verified by Roblox), so you cannot plan it.${mine?` <button type="button" class="danger" data-plan-remove="${dataKey}">Remove your existing plan</button>`:""}</div>`;
+  }else{
+    editor=`<div class="plan-edit"><div class="plan-panel-title">${mine?"Your note":"Add your plan"}</div><textarea maxlength="500" data-plan-note placeholder="Optional note for the community (500 characters max)...">${mine?esc(mine.note||""):""}</textarea><div class="plan-edit-actions"><button type="button" data-plan-save="${dataKey}">${mine?"Save changes":"Plan this badge"}</button>${mine?`<button type="button" class="danger" data-plan-remove="${dataKey}">Remove my plan</button>`:""}</div><div class="plan-notice">Your plan and note are public and visible to everyone.</div></div>`;
+  }
   return `<div class="plan-widget"><button type="button" class="plan-summary" data-plan-toggle="${dataKey}" aria-expanded="${open}"><span>⚑ Planned</span><span class="plan-count">${plans.length}</span><span>${plans.length===1?"person":"people"}</span></button>${open?`<div class="plan-panel"><div class="plan-panel-title">Community plans · ${plans.length}</div>${people}${editor}</div>`:""}</div>`;
 }
 async function savePlannedBadge(button){
   const badge=S.badges.find(b=>bk(b)===button.dataset.planSave);
   if(!badge)return;
   if(!S.profileUid||!window.fbSavePlannedBadge){alert("Sign in to UHBL to plan a badge.");return;}
+  if(personallyOwnsBadge(badge)){alert("You already own this badge, verified by Roblox. You cannot add it to your planned badges.");render();return;}
   const panel=button.closest(".plan-panel"),note=panel?.querySelector("[data-plan-note]")?.value||"";
   if(note.length>500){alert("Notes must be 500 characters or fewer.");return;}
   const badgeKey=bk(badge);S.planBusyKey=badgeKey;button.disabled=true;button.textContent="Saving...";
@@ -1619,6 +1634,11 @@ if(C){
     const user=au.currentUser;
     if(!user)throw new Error("Sign in first.");
     const profile=window.UHBL_APP_STATE.profileData||{};
+    const existingProgress=profile.progress||{};
+    const badgeKey=String(badge.game)+"|"+String(badge.name);
+    if(existingProgress[badgeKey]?.verified===true){
+      throw new Error("You already own this badge, verified by Roblox. You cannot plan it.");
+    }
     const linked=profile.linkedRoblox||{};
     const displayName=user.displayName||(user.isAnonymous?"UHBL Guest":"UHBL Player");
     const record={uid:user.uid,badgeKey:bk(badge),game:badge.game,badgeName:badge.name,displayName,robloxUsername:linked.username||null,note:String(note||"").slice(0,500),updatedAt:Date.now()};
