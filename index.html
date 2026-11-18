@@ -330,6 +330,15 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
 .profile-sort-tools label{font-size:10px;color:var(--mut);letter-spacing:.08em;text-transform:uppercase}
 .profile-sort-tools select{min-width:145px;height:34px;padding:5px 9px;font-size:11px}
 @media(max-width:650px){.player-mini-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.compare-picker,.compare-columns{grid-template-columns:1fr}.player-profile-hero{padding:15px}.player-profile-name{font-size:22px}.player-avatar.large{width:82px;height:82px}.compare-summary{grid-template-columns:1fr 1fr}.compare-stat:last-child{grid-column:1/-1}}
+
+.admin-create-id-only{grid-template-columns:minmax(180px,1.2fr) minmax(150px,.8fr) auto;max-width:900px;align-items:end}
+.admin-create-id-only .admin-create-hint{grid-column:1/-1;color:var(--muted);font-size:11px;line-height:1.45;margin-top:-2px}
+.admin-tools .title-field{grid-column:1/-1}
+.title-edit-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.title-edit-row input{width:100%;min-width:0;height:36px}
+.title-edit-row button{height:36px;white-space:nowrap}
+@media(max-width:760px){.admin-create-id-only{grid-template-columns:minmax(0,1fr) minmax(130px,.8fr)}.admin-create-id-only #createBadge{grid-column:1/-1}}
+@media(max-width:420px){.admin-create-id-only{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -451,17 +460,16 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
 </div>
 <main>
   <div class="panel" id="apanel">
-    <div class="lab" style="width:100%">Badge management · Create a badge here, or delete badges from their cards below.</div>
-    <div class="admin-create">
-      <label class="field"><span class="lab">Game name</span><input id="newGame" type="text" placeholder="Game name" maxlength="120"></label>
-      <label class="field"><span class="lab">Badge name</span><input id="newBadgeName" type="text" placeholder="Badge name" maxlength="160"></label>
-      <label class="field"><span class="lab">Roblox badge ID (optional)</span><input id="newBadgeId" type="text" inputmode="numeric" placeholder="Badge ID"></label>
+    <div class="lab" style="width:100%">Badge management · Edit badge titles on their cards, or create a badge from its Roblox ID.</div>
+    <div class="admin-create admin-create-id-only">
+      <label class="field"><span class="lab">Roblox badge ID</span><input id="newBadgeId" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Paste Roblox badge ID" maxlength="20" autocomplete="off"></label>
       <label class="field"><span class="lab">Difficulty tier</span><select id="newBadgeTier">
         <option value="">Unassigned</option><option value="0">0.5 star</option>
         <option value="1">★ 1 star</option><option value="2">★★ 2 stars</option><option value="3">★★★ 3 stars</option>
         <option value="4">★★★★ 4 stars</option><option value="5">★★★★★ 5 stars</option><option value="6">★★★★★★ 6 stars</option>
       </select></label>
-      <button id="createBadge" type="button">Create badge</button>
+      <button id="createBadge" type="button">Fetch details & create</button>
+      <div class="admin-create-hint">UHBL automatically fetches the badge title and game from Roblox. Only the difficulty tier is yours to choose.</div>
     </div>
     <div class="msg" id="amsg" aria-live="polite"></div>
   </div>
@@ -1217,6 +1225,7 @@ function render(){
   <div class="vic">${victors.length?victors.map(x=>{const isFirst=firstNames.has(key(x.n));const visibleDate=victorDateLabel(x);return `<span class="chip ${isFirst?"fc":""}" title="${esc(victorDateTitle(x))}">${isFirst?"★ ":""}${esc(x.n)}${visibleDate?`<i>${esc(visibleDate)}</i>`:""}${S.admin&&x.legacyIndex!=null?`<b data-rm="${i}:${x.legacyIndex}" title="Remove legacy victor">×</b>`:""}</span>`}).join(""):`<span class="gm">Nobody yet</span>`}</div>
   ${renderPlannedBadge(b)}
   ${S.admin?`<div class="admin-tools">
+    <div class="field title-field"><span class="lab">Badge title</span><div class="title-edit-row"><input type="text" maxlength="160" value="${esc(b.name)}" data-badge-title="${i}" aria-label="Badge title"><button type="button" data-save-title="${i}">Save title</button></div></div>
     <div class="field id-field"><span class="lab">Roblox badge ID</span><input inputmode="numeric" placeholder="Enter badge ID" value="${esc(b.id||"")}" data-bid="${i}"></div>
     <button data-saveid="${i}">Save ID</button>
     <div class="field"><span class="lab">Difficulty tier</span><select data-tier="${i}">
@@ -1256,6 +1265,24 @@ document.addEventListener("click",e=>{const t=e.target.closest?.("[data-plan-tog
   if(t.dataset.rt!=null){S.rt=t.dataset.rt=="any"?"any":+t.dataset.rt;S.roll=null;render()}
   if(t.dataset.rs!=null){S.rs=t.dataset.rs;S.roll=null;render()}
   if(t.dataset.roll)doRoll();
+  if(t.dataset.saveTitle!=null){
+    if(!S.admin)return;
+    const i=Number(t.dataset.saveTitle),badge=S.badges[i],input=document.querySelector(`[data-badge-title="${i}"]`);
+    if(!badge||!input)return;
+    const nextName=input.value.trim();
+    if(!nextName){$("#amsg").textContent="Badge title cannot be empty.";return;}
+    if(nextName.length>160){$("#amsg").textContent="Badge title must be 160 characters or fewer.";return;}
+    if(nextName===badge.name){$("#amsg").textContent="Badge title is unchanged.";return;}
+    if(S.badges.some((other,j)=>j!==i&&other.game===badge.game&&key(other.name)===key(nextName))){$("#amsg").textContent="That game already has a badge with this title.";return;}
+    const oldKey=bk(badge);
+    if(SAMPLE.some(original=>bk(original)===oldKey)&&!S.deleted.includes(oldKey))S.deleted.push(oldKey);
+    badge.name=nextName;
+    // A renamed stock badge is persisted as a custom record under its new key.
+    badge.custom=true;
+    save();render();
+    $("#amsg").textContent=`Updated badge title to “${nextName}”. Its existing tier, Roblox ID and community victor records were kept.`;
+    return;
+  }
   if(t.dataset.saveid!=null){const i=+t.dataset.saveid,inp=document.querySelector(`[data-bid="${i}"]`),id=inp.value.trim();if(id&&!/^\d+$/.test(id)){$("#amsg").textContent="Badge ID must contain numbers only.";return}S.badges[i].id=id||null;save();render();if(id)loadIcons([id]);$("#amsg").textContent=id?`Saved badge ID ${id}. Loading its Roblox icon…`:"Badge ID removed."}
   if(t.dataset.deleteBadge!=null){
     if(!S.admin)return;
@@ -1283,23 +1310,38 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.dataset.profileCompare==="b"){S.compareProfileB=t.value;if(S.compareProfileA===S.compareProfileB)S.compareProfileA=S.publicProfiles.find(p=>p.uid!==S.compareProfileB)?.uid||null;renderProfiles()}
   if(t.id==="profileAchievementSort"){S.profileSortMode=["difficulty","newest","oldest"].includes(t.value)?t.value:"difficulty";renderProfiles()}
 });
-document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.bid!=null){const i=+e.target.dataset.bid;document.querySelector(`[data-saveid="${i}"]`).click()}});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target.dataset.bid!=null){const i=+e.target.dataset.bid;document.querySelector(`[data-saveid="${i}"]`).click();}
+  if(e.key==="Enter"&&e.target.dataset.badgeTitle!=null){const i=+e.target.dataset.badgeTitle;document.querySelector(`[data-save-title="${i}"]`).click();}
+});
 $("#q").oninput=e=>{S.q=e.target.value;render()};
 $("#adm").onclick=async e=>{const btn=e.currentTarget,want=!S.admin;
   if(window.LIVE&&want){if(!(await window.fbLogin())){$("#amsg").textContent="That Google account isn't the admin.";$("#apanel").classList.add("show");return}}
   S.admin=want;btn.textContent="Admin: "+(S.admin?"On":"Off");btn.classList.toggle("on",S.admin);$("#apanel").classList.toggle("show",S.admin);render()};
-$("#createBadge").onclick=()=>{
+$("#createBadge").onclick=async()=>{
   if(!S.admin)return;
-  const game=$("#newGame").value.trim(),name=$("#newBadgeName").value.trim(),id=$("#newBadgeId").value.trim(),tier=$("#newBadgeTier").value;
-  if(!game||!name){$("#amsg").textContent="Enter both a game name and a badge name.";return}
-  if(id&&!/^\d+$/.test(id)){$("#amsg").textContent="Badge ID must contain numbers only.";return}
-  const candidate={game,name};
-  if(S.badges.some(b=>bk(b)===bk(candidate))){$("#amsg").textContent="That game and badge combination already exists.";return}
-  const badge={...candidate,id:id||null,t:tier===""?null:Number(tier),victors:[],custom:true};
-  S.badges.push(badge);save();
-  $("#newGame").value="";$("#newBadgeName").value="";$("#newBadgeId").value="";$("#newBadgeTier").value="";
-  S.tab="tr";document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t==="tr"));
-  render();if(id)loadIcons([id]);$("#amsg").textContent=`Created ${name} in ${game}.`;
+  const id=$("#newBadgeId").value.trim(),tier=$("#newBadgeTier").value,button=$("#createBadge");
+  if(!/^\d{1,20}$/.test(id)){$("#amsg").textContent="Enter a numeric Roblox badge ID.";return;}
+  const existingById=S.badges.find(b=>String(b.id||"")===id);
+  if(existingById){$("#amsg").textContent=`That Roblox badge ID is already tracked as “${existingById.name}” in ${existingById.game}.`;return;}
+  button.disabled=true;button.textContent="Fetching Roblox details…";
+  try{
+    const response=await fetch(`${ROBLOX_WORKER_URL}/roblox/badge-info?badgeId=${encodeURIComponent(id)}`,{method:"GET",cache:"no-store",headers:{Accept:"application/json"}});
+    const raw=await response.text();let data={};try{data=raw?JSON.parse(raw):{}}catch{data={raw:raw.slice(0,500)}}
+    if(!response.ok)throw new Error(`${data.error||"Roblox badge lookup failed"} (HTTP ${response.status})${data.hint?" · "+data.hint:""}${data.details?" · "+JSON.stringify(data.details).slice(0,350):""}`);
+    const game=String(data.gameName||data.awardingUniverse?.name||"").trim();
+    const name=String(data.name||"").trim();
+    if(!game||!name)throw new Error("Roblox returned the badge, but its title or awarding game name was missing. No badge was created.");
+    const candidate={game,name};
+    if(S.badges.some(b=>bk(b)===bk(candidate))){throw new Error(`“${name}” from ${game} is already in the tracker. No duplicate was created.`);}
+    const badge={...candidate,id,t:tier===""?null:Number(tier),victors:[],custom:true};
+    S.badges.push(badge);save();
+    $("#newBadgeId").value="";$("#newBadgeTier").value="";
+    S.tab="tr";document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t==="tr"));
+    render();loadIcons([id]);
+    $("#amsg").textContent=`Created “${name}” in ${game}. Roblox badge ID ${id} saved; difficulty ${tier===""?"left unassigned":tier=== "0"?"set to 0.5 star":`set to ${tier} star${tier==="1"?"":"s"}`}.`;
+  }catch(error){console.error("UHBL admin badge lookup failed:",error);$("#amsg").textContent=`Could not create badge: ${error.message}`;}
+  finally{button.disabled=false;button.textContent="Fetch details & create";}
 };
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function jget(url,options={}){for(let a=0;a<4;a++){const r=await fetch(url,options);if(r.status==429){await sleep(2500*(a+1));continue}if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}throw new Error("rate limited")}
