@@ -955,39 +955,61 @@ function getGlobalVictors(b){
   });
   return [...merged.values()];
 }
-// Roblox Inventory API addTime records the actual badge award timestamp.
-// Treat awards within one second as co-first to avoid claiming a false winner
-// when Roblox records effectively simultaneous awards with small timing jitter.
-const FIRST_CLEAR_TIE_WINDOW_MS=1000;
+// Roblox Open Cloud inventoryItems[].addTime is the award timestamp for badges.
+// First clear is strictly the earliest known award time: no one-second grace
+// window and no co-first grouping. If timestamps are exactly identical after
+// Roblox precision is applied, use username as a stable single-winner tie-break.
 function victorAwardTimestamp(v){
   const raw=v&&v.d!=null?String(v.d).trim():"";
-  // Legacy records often contain only YYYY-MM-DD; those cannot establish order
-  // within that day, so they are handled as date-level ties below.
   if(!raw||/^\d{4}-\d{2}-\d{2}$/.test(raw))return null;
   const value=Date.parse(raw);
   return Number.isFinite(value)?value:null;
 }
+function victorAwardDay(v){
+  const raw=v&&v.d!=null?String(v.d).trim():"";
+  const match=raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?match[1]:"";
+}
 function firstVictors(b){
   const victors=getGlobalVictors(b);
   if(!victors.length)return [];
-  const precise=victors.map(v=>({v,time:victorAwardTimestamp(v)})).filter(x=>x.time!==null);
-  if(precise.length){
-    const earliest=Math.min(...precise.map(x=>x.time));
-    return precise.filter(x=>x.time-earliest<=FIRST_CLEAR_TIE_WINDOW_MS).map(x=>x.v);
-  }
-  // Backward compatibility: where only calendar dates exist, do not pick an
-  // arbitrary person from that day. Display everyone recorded on the earliest day.
-  const dated=victors.filter(v=>v.d).map(v=>({v,day:String(v.d).slice(0,10)}));
-  if(!dated.length)return [victors[0]];
+  const dated=victors.map(v=>({v,day:victorAwardDay(v),time:victorAwardTimestamp(v)}))
+    .filter(x=>x.day);
+  if(!dated.length)return [];
   const earliestDay=dated.map(x=>x.day).sort()[0];
-  return dated.filter(x=>x.day===earliestDay).map(x=>x.v);
+  const earliestDayEntries=dated.filter(x=>x.day===earliestDay);
+
+  // A date-only record cannot be ordered against another award on the same
+  // calendar day. Do not invent a winner when that ambiguity exists.
+  if(earliestDayEntries.length===1)return [earliestDayEntries[0].v];
+  if(earliestDayEntries.some(x=>x.time===null))return [];
+
+  // All candidates on the earliest day have precise timestamps. Select one.
+  // A real 30-minute difference will therefore always select the earlier one.
+  earliestDayEntries.sort((a,b)=>a.time-b.time||
+    String(a.v.n||"").localeCompare(String(b.v.n||"")));
+  return [earliestDayEntries[0].v];
 }
 function first(b){return firstVictors(b)[0]||null;}
 function victorDateTitle(v){
+  const raw=v&&v.d!=null?String(v.d).trim():"";
   const timestamp=victorAwardTimestamp(v);
-  if(timestamp===null)return v.d?`Recorded date only: ${String(v.d).slice(0,10)} · exact award time unavailable`:`Award time unavailable`;
-  const d=new Date(timestamp);
-  return `Roblox award time: ${d.toLocaleString()} · ${d.toISOString()}`;
+  if(timestamp===null)return raw?`Recorded date only: ${raw.slice(0,10)} · exact award timestamp unavailable`:`Award timestamp unavailable`;
+  // Keep the canonical ISO-8601 UTC timestamp in the native hover tooltip.
+  // toISOString() explicitly includes all three millisecond digits.
+  const exactUtc=new Date(timestamp).toISOString();
+  const local=new Date(timestamp).toLocaleString(undefined,{
+    year:"numeric",month:"long",day:"numeric",
+    hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false
+  });
+  return `Exact Roblox award timestamp: ${exactUtc} (UTC) · ${local} (local time)`;
+}
+function victorDateLabel(v){
+  const raw=v&&v.d!=null?String(v.d).trim():"";
+  // Keep the compact date-only chip; hover it to see the full millisecond timestamp.
+  if(!raw)return "";
+  const match=raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?match[1]:raw;
 }
 function icon(b){if(b.id&&IMG[b.id])return `<img data-badge-icon="${esc(b.id)}" src="${esc(IMG[b.id])}" alt="Roblox badge icon" loading="lazy">`;let h=0;for(const c of b.name)h=(h*31+c.charCodeAt(0))%360;const ini=b.name.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
 return `<svg viewBox="0 0 64 64"><polygon points="32,2 60,18 60,46 32,62 4,46 4,18" fill="hsl(${h},80%,18%)" stroke="hsl(${h},90%,60%)" stroke-width="2.5"/><text x="32" y="40" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="sans-serif">${esc(ini)}</text></svg>`}
@@ -1192,7 +1214,7 @@ function render(){
   const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep"><span>${TL(b.t)}</span><span class="sep-count">${tierDone}/${tierBadges.length}</span></div>`):"";
   return hd+`<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
   <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Community victors</div>
-  <div class="vic">${victors.length?victors.map(x=>{const isFirst=firstNames.has(key(x.n));const visibleDate=x.d?String(x.d).slice(0,10):"";return `<span class="chip ${isFirst?"fc":""}" title="${esc(victorDateTitle(x))}">${isFirst?"★ ":""}${esc(x.n)}${visibleDate?`<i>${esc(visibleDate)}</i>`:""}${S.admin&&x.legacyIndex!=null?`<b data-rm="${i}:${x.legacyIndex}" title="Remove legacy victor">×</b>`:""}</span>`}).join(""):`<span class="gm">Nobody yet</span>`}</div>
+  <div class="vic">${victors.length?victors.map(x=>{const isFirst=firstNames.has(key(x.n));const visibleDate=victorDateLabel(x);return `<span class="chip ${isFirst?"fc":""}" title="${esc(victorDateTitle(x))}">${isFirst?"★ ":""}${esc(x.n)}${visibleDate?`<i>${esc(visibleDate)}</i>`:""}${S.admin&&x.legacyIndex!=null?`<b data-rm="${i}:${x.legacyIndex}" title="Remove legacy victor">×</b>`:""}</span>`}).join(""):`<span class="gm">Nobody yet</span>`}</div>
   ${renderPlannedBadge(b)}
   ${S.admin?`<div class="admin-tools">
     <div class="field id-field"><span class="lab">Roblox badge ID</span><input inputmode="numeric" placeholder="Enter badge ID" value="${esc(b.id||"")}" data-bid="${i}"></div>
@@ -1494,8 +1516,8 @@ function inventoryBadgeId(item){
 function inventoryAwardDate(item){
   const raw=item?.addTime??item?.addedAt??item?.awardedAt??item?.badgeDetails?.addTime??null;
   if(raw==null||raw==="")return null;
-  // Preserve the full Roblox award timestamp (including sub-second precision)
-  // instead of truncating it to YYYY-MM-DD.
+  // Roblox Open Cloud returns addTime as an ISO-8601 award timestamp.
+  // Normalize to UTC without dropping millisecond precision (YYYY-MM-DDTHH:mm:ss.sssZ).
   const numeric=typeof raw==="number"?raw:null;
   const date=new Date(numeric!==null&&numeric<1e12?numeric*1000:raw);
   return Number.isNaN(date.getTime())?null:date.toISOString();
