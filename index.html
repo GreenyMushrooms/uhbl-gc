@@ -1473,9 +1473,11 @@ async function syncRobloxBadges(){
       throw new Error(`Roblox returned ${items.length} inventory items, but UHBL could not read any badge IDs. First item fields: ${keys}. badgeDetails fields: ${nested}. No progress was changed.`);
     }
     const progress={...(profile.progress||{})};let matched=0,added=0;
+    const matchedBadges=[];
     for(const badge of S.badges){
       const id=String(badge.id||"");if(!id||!owned.has(id))continue;
       matched++;
+      matchedBadges.push(badge);
       const previous=progress[bk(badge)];
       const awardDate=owned.get(id)||previous?.earnedAt||null;
       if(!previous||previous.verified!==true)added++;
@@ -1488,12 +1490,32 @@ async function syncRobloxBadges(){
     }catch(publicError){
       throw new Error(`Your personal sync was saved (${matched} tracked badges matched), but publishing the global victor/profile update failed: ${publicError.message}. Deploy the updated Firestore rules included with the sync fix.`);
     }
-    S.profileData=next;S.myProgress=progress;render();
+    S.profileData=next;S.myProgress=progress;
+
+    // Once Roblox ownership has been successfully saved and published,
+    // remove only this signed-in user's plans for badges confirmed in this sync.
+    let removedPlannedCount=0,plannedCleanupWarning="";
+    if(matchedBadges.length&&typeof window.fbDeleteEarnedPlannedBadges==="function"){
+      try{
+        const removedKeys=await window.fbDeleteEarnedPlannedBadges(matchedBadges);
+        const removedSet=new Set(removedKeys);
+        removedPlannedCount=removedSet.size;
+        if(removedSet.size){
+          S.plannedPlans=(S.plannedPlans||[]).filter(plan=>!(plan.uid===S.profileUid&&removedSet.has(plan.badgeKey)));
+          S.plannedByBadge={};
+          S.plannedPlans.forEach(plan=>{(S.plannedByBadge[plan.badgeKey]||=[]).push(plan)});
+        }
+      }catch(planError){
+        console.error("Automatic planned-badge cleanup failed:",planError);
+        plannedCleanupWarning=" Your badge sync succeeded, but some planned entries could not be removed; please retry or remove them manually.";
+      }
+    }
+    render();
     if(matched===0){
       const examples=[...owned.keys()].slice(0,8).join(", ");
       robloxStatus(`Roblox returned ${items.length} badge items across ${totalPages} inventory pages and UHBL read ${owned.size} badge IDs, but none matched the ${trackedWithIds.length} tracked badges that currently have IDs. No global victors were added. Example owned badge IDs: ${examples||"none"}. This usually means one or more UHBL badge IDs need correcting.`);
     }else{
-      robloxStatus(`Sync complete for @${link.username}: Roblox checked ${trackedBadgeIds.length} tracked badge IDs and returned ${items.length} owned matches across ${totalPages} pages (${batches} Worker requests); UHBL parsed ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified${rateLimitRetries?` after ${rateLimitRetries} rate-limit retries`:""}. Your global victor list has been updated for everyone.${unparsed?` ${unparsed} item(s) had no readable badge ID.`:""}`);
+      robloxStatus(`Sync complete for @${link.username}: Roblox checked ${trackedBadgeIds.length} tracked badge IDs and returned ${items.length} owned matches across ${totalPages} pages (${batches} Worker requests); UHBL parsed ${owned.size} unique badge IDs; ${matched} matched tracked badges; ${added} were newly verified. ${removedPlannedCount} of your planned badge entr${removedPlannedCount===1?"y was":"ies were"} automatically removed.${rateLimitRetries?` ${rateLimitRetries} rate-limit retries were needed.`:""}${unparsed?` ${unparsed} item(s) had no readable badge ID.`:""}${plannedCleanupWarning}`);
     }
   }catch(error){
     console.error("UHBL badge sync failed",error);
@@ -1606,6 +1628,21 @@ if(C){
     const user=au.currentUser;
     if(!user)throw new Error("Sign in first.");
     await deleteDoc(plannedRef(plannedDocId(badge,user.uid)));
+  };
+  window.fbDeleteEarnedPlannedBadges=async badges=>{
+    const user=au.currentUser;
+    if(!user)throw new Error("Sign in first.");
+    const removedKeys=[];
+    for(const badge of badges||[]){
+      const ref=plannedRef(plannedDocId(badge,user.uid));
+      const snapshot=await getDoc(ref);
+      if(!snapshot.exists())continue;
+      const record=snapshot.data();
+      if(record?.uid!==user.uid)continue;
+      await deleteDoc(ref);
+      removedKeys.push(bk(badge));
+    }
+    return removedKeys;
   };
   onSnapshot(legacyRef,s=>window.applyRemote(s.exists()?s.data().badges||{}:{}),e=>{console.error("Community state listener:",e);window.applyRemote({})});
   onSnapshot(collection(db,"publicProfiles"),snap=>{const S=window.UHBL_APP_STATE;S.publicProfiles=snap.docs.map(d=>({uid:d.id,...d.data()}));render();},e=>console.error("Public profiles listener:",e));
