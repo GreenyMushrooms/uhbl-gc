@@ -38,7 +38,12 @@ button.on{background:#fff;color:#000;border-color:#fff}
 main{max-width:1400px;margin:0 auto;padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .card{background:var(--card);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px;transition:.3s}
-.card.off{filter:grayscale(1);opacity:.45}
+/* Dim only the badge-completion content, not the community planning area.
+   Applying opacity/filter to the whole card also dimmed planned controls. */
+.card.off{filter:none;opacity:1}
+.card.off .top,.card.off>.tag,.card.off>.lab,.card.off>.vic,.card.off>.admin-tools{filter:grayscale(1);opacity:.46}
+.card.off{border-color:#292929}
+
 .card.on{border-color:var(--ok);box-shadow:0 0 18px rgba(57,255,20,.35),inset 0 0 22px rgba(57,255,20,.07)}
 .top{display:flex;gap:14px;align-items:center}
 .top svg{width:64px;height:64px;flex:none}
@@ -53,10 +58,10 @@ main{max-width:1400px;margin:0 auto;padding:20px}
 .chip b{cursor:pointer;color:#f55}
 
 /* Community planned badges */
-.plan-widget{display:flex;flex-direction:column;gap:8px;border-top:1px solid #252d25;padding-top:9px;margin-top:2px}
-.plan-summary{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:5px 9px;border:1px solid #344235;background:#090e09;color:#c8e8c5;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
-.plan-summary:hover{border-color:var(--ok);color:#fff}
-.plan-summary .plan-count{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:20px;background:#1a291b;color:var(--ok);font-size:10px}
+.plan-widget{display:flex;flex-direction:column;gap:8px;border:1px solid #344b35;border-left:3px solid #65ad55;border-radius:3px;background:linear-gradient(110deg,rgba(35,75,37,.20),rgba(8,13,8,.96) 58%);padding:10px;margin-top:3px;box-shadow:inset 0 0 14px rgba(57,255,20,.035)}
+.plan-summary{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;min-height:32px;padding:6px 10px;border:1px solid #5a8455;background:#142016;color:#e0f8dc;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:850}
+.plan-summary:hover{border-color:var(--ok);background:#1b2b1c;color:#fff;box-shadow:0 0 10px rgba(57,255,20,.16)}
+.plan-summary .plan-count{display:inline-grid;place-items:center;min-width:21px;height:21px;padding:0 6px;border-radius:20px;background:#244226;color:#9cff83;font-size:11px;font-weight:900;border:1px solid #477b43}
 .plan-panel{border:1px solid #29372b;background:#070b07;padding:11px;display:flex;flex-direction:column;gap:10px}
 .plan-panel-title{font-size:11px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:#dcebdc}
 .plan-person{padding:9px;border:1px solid #222e23;background:#0b100b;display:flex;flex-direction:column;gap:4px;min-width:0}
