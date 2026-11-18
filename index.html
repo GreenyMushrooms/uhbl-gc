@@ -944,16 +944,50 @@ function getGlobalVictors(b){
     if(existing){
       existing.verified=true;
       existing.source="legacy+sync";
-      if(!existing.d&&date)existing.d=date;
+      // Prefer Roblox's full verified award timestamp over an older
+      // manually recorded date-only community entry.
+      if(date){
+        const oldIsPrecise=victorAwardTimestamp(existing)!==null;
+        const newIsPrecise=victorAwardTimestamp({d:date})!==null;
+        if(!existing.d||(newIsPrecise&&!oldIsPrecise))existing.d=date;
+      }
     }else merged.set(k,{n:name,d:date,source:"sync",verified:true,profileUid:profile.uid});
   });
   return [...merged.values()];
 }
-function first(b){
+// Roblox Inventory API addTime records the actual badge award timestamp.
+// Treat awards within one second as co-first to avoid claiming a false winner
+// when Roblox records effectively simultaneous awards with small timing jitter.
+const FIRST_CLEAR_TIE_WINDOW_MS=1000;
+function victorAwardTimestamp(v){
+  const raw=v&&v.d!=null?String(v.d).trim():"";
+  // Legacy records often contain only YYYY-MM-DD; those cannot establish order
+  // within that day, so they are handled as date-level ties below.
+  if(!raw||/^\d{4}-\d{2}-\d{2}$/.test(raw))return null;
+  const value=Date.parse(raw);
+  return Number.isFinite(value)?value:null;
+}
+function firstVictors(b){
   const victors=getGlobalVictors(b);
-  if(!victors.length)return null;
-  const dated=victors.filter(v=>v.d).sort((a,c)=>String(a.d).localeCompare(String(c.d)));
-  return dated[0]||victors[0];
+  if(!victors.length)return [];
+  const precise=victors.map(v=>({v,time:victorAwardTimestamp(v)})).filter(x=>x.time!==null);
+  if(precise.length){
+    const earliest=Math.min(...precise.map(x=>x.time));
+    return precise.filter(x=>x.time-earliest<=FIRST_CLEAR_TIE_WINDOW_MS).map(x=>x.v);
+  }
+  // Backward compatibility: where only calendar dates exist, do not pick an
+  // arbitrary person from that day. Display everyone recorded on the earliest day.
+  const dated=victors.filter(v=>v.d).map(v=>({v,day:String(v.d).slice(0,10)}));
+  if(!dated.length)return [victors[0]];
+  const earliestDay=dated.map(x=>x.day).sort()[0];
+  return dated.filter(x=>x.day===earliestDay).map(x=>x.v);
+}
+function first(b){return firstVictors(b)[0]||null;}
+function victorDateTitle(v){
+  const timestamp=victorAwardTimestamp(v);
+  if(timestamp===null)return v.d?`Recorded date only: ${String(v.d).slice(0,10)} · exact award time unavailable`:`Award time unavailable`;
+  const d=new Date(timestamp);
+  return `Roblox award time: ${d.toLocaleString()} · ${d.toISOString()}`;
 }
 function icon(b){if(b.id&&IMG[b.id])return `<img data-badge-icon="${esc(b.id)}" src="${esc(IMG[b.id])}" alt="Roblox badge icon" loading="lazy">`;let h=0;for(const c of b.name)h=(h*31+c.charCodeAt(0))%360;const ini=b.name.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
 return `<svg viewBox="0 0 64 64"><polygon points="32,2 60,18 60,46 32,62 4,46 4,18" fill="hsl(${h},80%,18%)" stroke="hsl(${h},90%,60%)" stroke-width="2.5"/><text x="32" y="40" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="sans-serif">${esc(ini)}</text></svg>`}
@@ -982,7 +1016,7 @@ document.addEventListener("error",e=>{
   render();
   scheduleIconRefresh();
 },true);
-function stats(){const tot={},fc={};S.badges.forEach(b=>{getGlobalVictors(b).forEach(v=>tot[v.n]=(tot[v.n]||0)+1);const f=first(b);if(f)fc[f.n]=(fc[f.n]||0)+1});
+function stats(){const tot={},fc={};S.badges.forEach(b=>{getGlobalVictors(b).forEach(v=>tot[v.n]=(tot[v.n]||0)+1);firstVictors(b).forEach(f=>fc[f.n]=(fc[f.n]||0)+1)});
 const srt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return{tot:srt(tot),fc:srt(fc)}}
 function rank(list){return list.length?list.map((e,i)=>`<div class="row ${i<3?"r"+(i+1):""}"><div class="rk">${i+1}</div><div class="n">${esc(e[0])}</div><div class="s">${e[1]}</div></div>`).join(""):`<div class="empty">No data yet</div>`}
 // The tracker is a community-wide view. Login never changes which badges
@@ -1007,7 +1041,7 @@ function profileAvatar(profile,size=""){
 }
 function profileMetrics(profile,communityStats=null){
   const badges=profileBadges(profile),verified=profileVerifiedKeys(profile);
-  const firsts=badges.filter(b=>{const f=first(b);return f&&key(f.n)===key(profile?.robloxUsername||"")}).length;
+  const firsts=badges.filter(b=>firstVictors(b).some(f=>key(f.n)===key(profile?.robloxUsername||""))).length;
   const games=new Set(badges.map(b=>b.game)).size;
   const tierCounts={};
   badges.forEach(b=>{const label=b.t==null?"Unassigned":b.t===0?"0.5★":`${b.t}★`;tierCounts[label]=(tierCounts[label]||0)+1});
@@ -1152,13 +1186,13 @@ function render(){
   const tierOrder=t=>t==null?7:t;
   list.sort((a,b)=>tierOrder(a[0].t)-tierOrder(b[0].t)||a[1]-b[1]);
   let lt=null;
-  v.innerHTML=(isPersonalFilter?personalSummary:"")+ (list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),victors=getGlobalVictors(b),f=first(b),firstName=f?key(f.n):"";
+  v.innerHTML=(isPersonalFilter?personalSummary:"")+ (list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),victors=getGlobalVictors(b),firstNames=new Set(firstVictors(b).map(f=>key(f.n)));
   const tierBadges=b.t==null?[]:S.badges.filter(x=>x.t===b.t);
   const tierDone=tierBadges.filter(x=>ownsBadge(x)).length;
   const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep"><span>${TL(b.t)}</span><span class="sep-count">${tierDone}/${tierBadges.length}</span></div>`):"";
   return hd+`<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
   <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Community victors</div>
-  <div class="vic">${victors.length?victors.map(x=>`<span class="chip ${key(x.n)===firstName?"fc":""}">${key(x.n)===firstName?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin&&x.legacyIndex!=null?`<b data-rm="${i}:${x.legacyIndex}" title="Remove legacy victor">×</b>`:""}</span>`).join(""):`<span class="gm">Nobody yet</span>`}</div>
+  <div class="vic">${victors.length?victors.map(x=>{const isFirst=firstNames.has(key(x.n));const visibleDate=x.d?String(x.d).slice(0,10):"";return `<span class="chip ${isFirst?"fc":""}" title="${esc(victorDateTitle(x))}">${isFirst?"★ ":""}${esc(x.n)}${visibleDate?`<i>${esc(visibleDate)}</i>`:""}${S.admin&&x.legacyIndex!=null?`<b data-rm="${i}:${x.legacyIndex}" title="Remove legacy victor">×</b>`:""}</span>`}).join(""):`<span class="gm">Nobody yet</span>`}</div>
   ${renderPlannedBadge(b)}
   ${S.admin?`<div class="admin-tools">
     <div class="field id-field"><span class="lab">Roblox badge ID</span><input inputmode="numeric" placeholder="Enter badge ID" value="${esc(b.id||"")}" data-bid="${i}"></div>
@@ -1459,7 +1493,12 @@ function inventoryBadgeId(item){
 }
 function inventoryAwardDate(item){
   const raw=item?.addTime??item?.addedAt??item?.awardedAt??item?.badgeDetails?.addTime??null;
-  if(!raw)return null;const date=new Date(raw);return Number.isNaN(date.getTime())?null:date.toISOString().slice(0,10);
+  if(raw==null||raw==="")return null;
+  // Preserve the full Roblox award timestamp (including sub-second precision)
+  // instead of truncating it to YYYY-MM-DD.
+  const numeric=typeof raw==="number"?raw:null;
+  const date=new Date(numeric!==null&&numeric<1e12?numeric*1000:raw);
+  return Number.isNaN(date.getTime())?null:date.toISOString();
 }
 async function publishMyPublicProfile(profile){
   if(!S.profileUid||!profile?.linkedRoblox)return;
