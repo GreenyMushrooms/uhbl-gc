@@ -311,7 +311,7 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
   <div class="logo">UHBL</div>
   <div class="count" id="count"></div>
   <input id="q" placeholder="Search badge, game or player…" size="26">
-  <div class="grp" id="flt"><button data-f="all" class="on">All</button><button data-f="done">Completed</button><button data-f="todo">Incomplete</button></div>
+  <div class="grp" id="flt"><button data-f="all" class="on">All</button><button data-f="done">Completed</button><button data-f="todo">Incomplete</button><button data-f="mineTodo">Not completed by me</button></div>
   <div class="sp"></div>
   <div class="grp" id="tabs"><button data-t="tr" class="on">Badge Tracker</button><button data-t="lb">Leaderboard</button><button data-t="ro">Roulette</button><button data-t="pr">Player Profiles</button></div>
   <button id="adm">Admin: Off</button>
@@ -1082,13 +1082,25 @@ function render(){
   if(S.tab=="lb"){const s=stats();v.innerHTML=`<div class="lb"><div><h2>Community · Most Total Badges</h2>${rank(s.tot)}</div><div><h2>Community · Most First Clears</h2>${rank(s.fc)}</div></div>`;return}
   if(S.tab=="pr"){renderProfiles();return}
   const q=S.q.toLowerCase();
-  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f=="all"||(S.f=="done")==ownsBadge(b))&&(!q||(b.name+" "+b.game+" "+getGlobalVictors(b).map(x=>x.n).join(" ")).toLowerCase().includes(q)));
+  const personalCompleted=S.badges.filter(personallyOwnsBadge).length;
+  const personalIncomplete=S.badges.length-personalCompleted;
+  const personalSummary=S.profileUid
+    ? `<div class="gm" style="margin:0 0 12px">Your Roblox-verified progress: ${personalCompleted}/${S.badges.length} completed · ${personalIncomplete} not completed. This view uses your own verified sync, not community victors.</div>`
+    : `<div class="gm" style="margin:0 0 12px">Sign in to see which badges you personally haven't completed. Link your Roblox account and sync badges for an accurate verified checklist.</div>`;
+  const statusMatches=b=>{
+    if(S.f==="all")return true;
+    if(S.f==="done")return ownsBadge(b);
+    if(S.f==="todo")return !ownsBadge(b);
+    if(S.f==="mineTodo")return !personallyOwnsBadge(b);
+    return true;
+  };
+  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f!=="mineTodo"||!!S.profileUid)&&statusMatches(b)&&(!q||(b.name+" "+b.game+" "+getGlobalVictors(b).map(x=>x.n).join(" ")).toLowerCase().includes(q)));
   // Group badges by difficulty, lowest tier first. 0.5★ (0) through 6 stars;
   // unassigned badges are kept at the end. Preserve original order within each tier.
   const tierOrder=t=>t==null?7:t;
   list.sort((a,b)=>tierOrder(a[0].t)-tierOrder(b[0].t)||a[1]-b[1]);
   let lt=null;
-  v.innerHTML=list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),victors=getGlobalVictors(b),f=first(b),firstName=f?key(f.n):"";
+  v.innerHTML=(S.f==="mineTodo"?personalSummary:"")+ (list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),victors=getGlobalVictors(b),f=first(b),firstName=f?key(f.n):"";
   const tierBadges=b.t==null?[]:S.badges.filter(x=>x.t===b.t);
   const tierDone=tierBadges.filter(x=>ownsBadge(x)).length;
   const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep"><span>${TL(b.t)}</span><span class="sep-count">${tierDone}/${tierBadges.length}</span></div>`):"";
@@ -1105,7 +1117,7 @@ function render(){
       ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${b.t===n?"selected":""}>${"★".repeat(n)} ${n} star${n===1?"":"s"}</option>`).join("")}
     </select></div>
     <div class="delete-row"><button class="danger" data-delete-badge="${i}" type="button">Delete badge</button></div>
-  </div>`:""}</div>`}).join("")}</div>`:`<div class="empty">No badges match.</div>`}
+  </div>`:""}</div>`}).join("")}</div>`:`<div class="empty">${S.f==="mineTodo"?(!S.profileUid?"Sign in to see your personal incomplete badges.":"You have personally verified every tracked badge!"):"No badges match."}</div>`)}
 // ---- roulette ----
 S.rt="any";S.rs="any";S.rolling=false;
 const pool=()=>S.badges.filter(b=>(S.rt=="any"||b.t===S.rt)&&(S.rs=="any"||(S.rs=="done")==ownsBadge(b)));
