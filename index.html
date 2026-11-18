@@ -21,7 +21,19 @@ input:focus{outline:1px solid var(--acc)}
 button{cursor:pointer;text-transform:uppercase;font-size:12px;letter-spacing:.08em;font-weight:700}
 button:hover{border-color:#fff}
 button.on{background:#fff;color:#000;border-color:#fff}
-.grp{display:flex}.grp button+button{border-left:0}
+ .grp{display:flex;align-items:stretch}
+.grp button+button{border-left:0}
+/* Hover-only personal filter choices: the extra square overlays below its
+   parent button and never participates in header layout. */
+#flt .filter-menu{position:relative;display:flex;align-items:stretch;flex:none}
+#flt > button + .filter-menu,#flt .filter-menu+.filter-menu{margin-left:-1px}
+#flt .filter-menu .filter-main{height:100%;white-space:nowrap}
+#flt .filter-submenu{display:none;position:absolute;left:0;top:100%;z-index:50;width:100%;padding:0;margin:0}
+#flt .filter-menu:hover .filter-submenu,
+#flt .filter-menu:focus-within .filter-submenu{display:block}
+#flt .filter-submenu button{display:flex;width:100%;min-height:34px;height:34px;align-items:center;justify-content:center;padding:4px 5px;white-space:normal;text-align:center;line-height:1.05;font-size:9px;letter-spacing:.045em;border-top:0;}
+#flt .filter-submenu button.on{background:#fff;color:#000;border-color:#fff}
+
 .sp{flex:1}
 main{max-width:1400px;margin:0 auto;padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
@@ -318,7 +330,17 @@ textarea{width:100%;min-height:90px;background:#000;color:#fff;border:1px solid 
   <div class="logo">UHBL</div>
   <div class="count" id="count"></div>
   <input id="q" placeholder="Search badge, game or player…" size="26">
-  <div class="grp" id="flt"><button data-f="all" class="on">All</button><button data-f="done" title="Completed by me (Roblox-verified)" aria-label="Completed by me">Completed</button><button data-f="todo" title="Not completed by me (Roblox-verified)" aria-label="Not completed by me">Incomplete</button></div>
+  <div class="grp" id="flt">
+    <button data-f="all" class="on">All</button>
+    <div class="filter-menu">
+      <button class="filter-main" data-f="done" aria-haspopup="true">Completed</button>
+      <div class="filter-submenu"><button type="button" data-f="personalDone">Completed by me</button></div>
+    </div>
+    <div class="filter-menu">
+      <button class="filter-main" data-f="todo" aria-haspopup="true">Incomplete</button>
+      <div class="filter-submenu"><button type="button" data-f="personalTodo">Not completed by me</button></div>
+    </div>
+  </div>
   <div class="sp"></div>
   <div class="grp" id="tabs"><button data-t="tr" class="on">Badge Tracker</button><button data-t="lb">Leaderboard</button><button data-t="ro">Roulette</button><button data-t="pr">Player Profiles</button></div>
   <button id="adm">Admin: Off</button>
@@ -1094,22 +1116,25 @@ function render(){
   const personalCompleted=S.badges.filter(personallyOwnsBadge).length;
   const personalIncomplete=S.badges.length-personalCompleted;
   const personalReady=!!S.profileData?.lastInventorySync;
+  const isPersonalFilter=S.f==="personalDone"||S.f==="personalTodo";
   const personalSummary=personalReady
     ? `<div class="gm" style="margin:0 0 12px">Your personal progress: ${personalCompleted}/${S.badges.length} completed · ${personalIncomplete} not completed. Based on your latest Roblox badge sync.</div>`
-    : `<div class="gm" style="margin:0 0 12px">To use your personal Completed/Incomplete filters, sign in, link your Roblox account, and sync your badges first.</div>`;
+    : `<div class="gm" style="margin:0 0 12px">To use this personal filter, sign in, link your Roblox account, and sync your badges first.</div>`;
   const statusMatches=b=>{
     if(S.f==="all")return true;
-    if(S.f==="done")return personallyOwnsBadge(b);
-    if(S.f==="todo")return !personallyOwnsBadge(b);
+    if(S.f==="done")return ownsBadge(b);
+    if(S.f==="todo")return !ownsBadge(b);
+    if(S.f==="personalDone")return personallyOwnsBadge(b);
+    if(S.f==="personalTodo")return !personallyOwnsBadge(b);
     return true;
   };
-  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(S.f==="all"||personalReady)&&statusMatches(b)&&(!q||(b.name+" "+b.game+" "+getGlobalVictors(b).map(x=>x.n).join(" ")).toLowerCase().includes(q)));
+  const list=S.badges.map((b,i)=>[b,i]).filter(([b])=>(!isPersonalFilter||personalReady)&&statusMatches(b)&&(!q||(b.name+" "+b.game+" "+getGlobalVictors(b).map(x=>x.n).join(" ")).toLowerCase().includes(q)));
   // Group badges by difficulty, lowest tier first. 0.5★ (0) through 6 stars;
   // unassigned badges are kept at the end. Preserve original order within each tier.
   const tierOrder=t=>t==null?7:t;
   list.sort((a,b)=>tierOrder(a[0].t)-tierOrder(b[0].t)||a[1]-b[1]);
   let lt=null;
-  v.innerHTML=(S.f==="all"?"":personalSummary)+ (list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),victors=getGlobalVictors(b),f=first(b),firstName=f?key(f.n):"";
+  v.innerHTML=(isPersonalFilter?personalSummary:"")+ (list.length?`<div class="grid">${list.map(([b,i])=>{const on=ownsBadge(b),victors=getGlobalVictors(b),f=first(b),firstName=f?key(f.n):"";
   const tierBadges=b.t==null?[]:S.badges.filter(x=>x.t===b.t);
   const tierDone=tierBadges.filter(x=>ownsBadge(x)).length;
   const hd=b.t!=null&&b.t!==lt?(lt=b.t,`<div class="sep"><span>${TL(b.t)}</span><span class="sep-count">${tierDone}/${tierBadges.length}</span></div>`):"";
@@ -1126,7 +1151,7 @@ function render(){
       ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${b.t===n?"selected":""}>${"★".repeat(n)} ${n} star${n===1?"":"s"}</option>`).join("")}
     </select></div>
     <div class="delete-row"><button class="danger" data-delete-badge="${i}" type="button">Delete badge</button></div>
-  </div>`:""}</div>`}).join("")}</div>`:`<div class="empty">${!personalReady?"Sign in, link your Roblox account, and sync to use your personal badge filters.":(S.f==="done"?"You have no personally verified badges in the tracker yet.":"You have personally completed every tracked badge!")}</div>`)}
+  </div>`:""}</div>`}).join("")}</div>`:`<div class="empty">${isPersonalFilter&&!personalReady?"Sign in, link your Roblox account, and sync to use your personal badge filters.":(S.f==="personalDone"?"You have no personally verified badges in the tracker yet.":(S.f==="personalTodo"?"You have personally completed every tracked badge!":(S.f==="done"?"No badges have been completed by the community yet.":"Every tracked badge has been completed by the community!")))}</div>`)}
 // ---- roulette ----
 S.rt="any";S.rs="any";S.rolling=false;
 const pool=()=>S.badges.filter(b=>(S.rt=="any"||b.t===S.rt)&&(S.rs=="any"||(S.rs=="done")==ownsBadge(b)));
@@ -1168,7 +1193,15 @@ document.addEventListener("click",e=>{const t=e.target.closest?.("[data-plan-tog
     }
   }
   if(t.dataset.rm){const[i,j]=t.dataset.rm.split(":");S.badges[i].victors.splice(+j,1);save();render()}
-  if(t.dataset.f){S.f=t.dataset.f;document.querySelectorAll("#flt button").forEach(b=>b.classList.toggle("on",b===t));render()}
+  if(t.dataset.f){
+    S.f=t.dataset.f;
+    document.querySelectorAll("#flt [data-f]").forEach(b=>{
+      const f=b.dataset.f;
+      const related=f==="done"?"personalDone":(f==="todo"?"personalTodo":null);
+      b.classList.toggle("on",f===S.f||related===S.f);
+    });
+    render();
+  }
   if(t.dataset.t){S.tab=t.dataset.t;document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b===t));render()}});
 document.addEventListener("change",e=>{const t=e.target;
   if(t.dataset.tier!=null){const i=+t.dataset.tier;S.badges[i].t=t.value===""?null:Number(t.value);save();render();$("#amsg").textContent="Tier saved."}
