@@ -39,6 +39,24 @@ main{max-width:1400px;margin:0 auto;padding:20px}
 .on .chip{border-color:var(--ok)}
 .chip i{color:var(--mut);font-style:normal;font-size:11px}
 .chip b{cursor:pointer;color:#f55}
+
+/* Community planned badges */
+.plan-widget{display:flex;flex-direction:column;gap:8px;border-top:1px solid #252d25;padding-top:9px;margin-top:2px}
+.plan-summary{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:5px 9px;border:1px solid #344235;background:#090e09;color:#c8e8c5;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.plan-summary:hover{border-color:var(--ok);color:#fff}
+.plan-summary .plan-count{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:20px;background:#1a291b;color:var(--ok);font-size:10px}
+.plan-panel{border:1px solid #29372b;background:#070b07;padding:11px;display:flex;flex-direction:column;gap:10px}
+.plan-panel-title{font-size:11px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:#dcebdc}
+.plan-person{padding:9px;border:1px solid #222e23;background:#0b100b;display:flex;flex-direction:column;gap:4px;min-width:0}
+.plan-person-name{font-size:12px;font-weight:800;overflow-wrap:anywhere;color:#e8f0e8}
+.plan-person-handle{font-size:10px;color:#91a091;overflow-wrap:anywhere}
+.plan-person-note{font-size:12px;color:#d0d8d0;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.plan-edit{display:flex;flex-direction:column;gap:7px;padding-top:9px;border-top:1px solid #263027}
+.plan-edit textarea{width:100%;min-height:66px;resize:vertical;background:#030503;color:#fff;border:1px solid #344235;padding:9px;font:12px/1.45 "Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.plan-edit-actions{display:flex;gap:7px;flex-wrap:wrap}
+.plan-edit-actions button{font-size:10px;padding:7px 10px}
+.plan-empty{font-size:11px;color:var(--mut)}
+.plan-notice{font-size:10px;color:#829082;line-height:1.4}
 .fc{color:var(--gold)}
 .add{display:flex;gap:6px}.add input{flex:1;min-width:0}
 .admin-tools{border-top:1px solid var(--line);padding-top:10px;margin-top:2px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
@@ -671,7 +689,7 @@ function resolveBadgeId(b,x){
   return /^\d+$/.test(savedId)?savedId:defaultId;
 }
 SAMPLE.forEach(b=>{b.id=DEFAULT_IDS[bk(b)]||null;b.t=DEFAULT_TIERS[bk(b)]??null});
-let S={badges:SAMPLE.map(b=>({...b,victors:[]})),deleted:[],admin:false,f:"all",q:"",tab:"tr",profileUid:null,profileData:null,myProgress:{},publicProfiles:[],selectedProfileUid:null,profileMode:"directory",compareProfileA:null,compareProfileB:null,profileSortMode:"difficulty",legacyLoaded:false};
+let S={badges:SAMPLE.map(b=>({...b,victors:[]})),deleted:[],admin:false,f:"all",q:"",tab:"tr",profileUid:null,profileData:null,myProgress:{},publicProfiles:[],plannedPlans:[],plannedByBadge:{},planOpenKey:null,planBusyKey:null,selectedProfileUid:null,profileMode:"directory",compareProfileA:null,compareProfileB:null,profileSortMode:"difficulty",legacyLoaded:false};
 const LEGACY_LOCAL_DATA=(()=>{try{return JSON.parse(localStorage.getItem("uhbl2")||"{}")}catch(e){return {}}})();
 let legacyReadyResolve;
 const legacyReady=new Promise(resolve=>{legacyReadyResolve=resolve});
@@ -814,6 +832,40 @@ async function loadIcons(forceIds=[]){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const key=n=>String(n??"").normalize("NFKC").replace(/\s+/g," ").trim().toLocaleLowerCase();
+const plansForBadge=b=>S.plannedByBadge[bk(b)]||[];
+const myPlanForBadge=b=>plansForBadge(b).find(p=>p.uid===S.profileUid)||null;
+function renderPlannedBadge(b){
+  const badgeKey=bk(b),plans=plansForBadge(b).slice().sort((a,c)=>(Number(c.updatedAt)||0)-(Number(a.updatedAt)||0));
+  const mine=myPlanForBadge(b),open=S.planOpenKey===badgeKey;
+  const dataKey=esc(badgeKey);
+  const people=plans.length?plans.map(plan=>{
+    const name=plan.robloxUsername?`@${plan.robloxUsername}`:(plan.displayName||"UHBL Player");
+    const sub=plan.robloxUsername&&plan.displayName&&plan.displayName!==plan.robloxUsername?esc(plan.displayName):"";
+    return `<div class="plan-person"><div class="plan-person-name">${esc(name)}</div>${sub?`<div class="plan-person-handle">${sub}</div>`:""}<div class="plan-person-note">${plan.note?esc(plan.note):`<span class="plan-empty">No note added.</span>`}</div></div>`;
+  }).join(""):`<div class="plan-empty">Nobody has planned this badge yet.</div>`;
+  const editor=S.profileUid?`<div class="plan-edit"><div class="plan-panel-title">${mine?"Your note":"Add your plan"}</div><textarea maxlength="500" data-plan-note placeholder="Optional note for the community (500 characters max)...">${mine?esc(mine.note||""):""}</textarea><div class="plan-edit-actions"><button type="button" data-plan-save="${dataKey}">${mine?"Save changes":"Plan this badge"}</button>${mine?`<button type="button" class="danger" data-plan-remove="${dataKey}">Remove my plan</button>`:""}</div><div class="plan-notice">Your plan and note are public and visible to everyone.</div></div>`:`<div class="plan-notice">Sign in to add your own plan and note. Existing plans are public.</div>`;
+  return `<div class="plan-widget"><button type="button" class="plan-summary" data-plan-toggle="${dataKey}" aria-expanded="${open}"><span>⚑ Planned</span><span class="plan-count">${plans.length}</span><span>${plans.length===1?"person":"people"}</span></button>${open?`<div class="plan-panel"><div class="plan-panel-title">Community plans · ${plans.length}</div>${people}${editor}</div>`:""}</div>`;
+}
+async function savePlannedBadge(button){
+  const badge=S.badges.find(b=>bk(b)===button.dataset.planSave);
+  if(!badge)return;
+  if(!S.profileUid||!window.fbSavePlannedBadge){alert("Sign in to UHBL to plan a badge.");return;}
+  const panel=button.closest(".plan-panel"),note=panel?.querySelector("[data-plan-note]")?.value||"";
+  if(note.length>500){alert("Notes must be 500 characters or fewer.");return;}
+  const badgeKey=bk(badge);S.planBusyKey=badgeKey;button.disabled=true;button.textContent="Saving...";
+  try{await window.fbSavePlannedBadge(badge,note);S.planOpenKey=badgeKey;}
+  catch(error){console.error("Planned badge save failed:",error);alert("Could not save your plan: "+error.message);}
+  finally{S.planBusyKey=null;render();}
+}
+async function removePlannedBadge(button){
+  const badge=S.badges.find(b=>bk(b)===button.dataset.planRemove);
+  if(!badge||!window.fbDeletePlannedBadge)return;
+  if(!confirm("Remove your plan for this badge?"))return;
+  const badgeKey=bk(badge);S.planBusyKey=badgeKey;button.disabled=true;
+  try{await window.fbDeletePlannedBadge(badge);S.planOpenKey=badgeKey;}
+  catch(error){console.error("Planned badge removal failed:",error);alert("Could not remove your plan: "+error.message);}
+  finally{S.planBusyKey=null;render();}
+}
 function getGlobalVictors(b){
   const merged=new Map();
   (Array.isArray(b.victors)?b.victors:[]).forEach((v,index)=>{
@@ -1028,6 +1080,7 @@ function render(){
   return hd+`<div class="card ${on?"on":"off"}"><div class="top">${icon(b)}<div><div class="nm">${esc(b.name)}</div><div class="gm">${esc(b.game)}${b.id?` · #${esc(b.id)}`:""}${b.t!=null?`<span class="tier">${TL(b.t)}</span>`:""}</div></div></div>
   <div class="tag">${on?"COMPLETED":"UNCOMPLETED"}</div><div class="lab">Community victors</div>
   <div class="vic">${victors.length?victors.map(x=>`<span class="chip ${key(x.n)===firstName?"fc":""}">${key(x.n)===firstName?"★ ":""}${esc(x.n)}${x.d?`<i>${esc(x.d)}</i>`:""}${S.admin&&x.legacyIndex!=null?`<b data-rm="${i}:${x.legacyIndex}" title="Remove legacy victor">×</b>`:""}</span>`).join(""):`<span class="gm">Nobody yet</span>`}</div>
+  ${renderPlannedBadge(b)}
   ${S.admin?`<div class="admin-tools">
     <div class="field id-field"><span class="lab">Roblox badge ID</span><input inputmode="numeric" placeholder="Enter badge ID" value="${esc(b.id||"")}" data-bid="${i}"></div>
     <button data-saveid="${i}">Save ID</button>
@@ -1057,7 +1110,10 @@ function doRoll(){if(S.rolling)return;const p=pool(),r=$("#rres");
   S.rolling=true;let k=0;const final=p[Math.random()*p.length|0];
   const iv=setInterval(()=>{k++;if(k>=18){clearInterval(iv);S.rolling=false;S.roll=S.badges.indexOf(final);r.innerHTML=resCard(final);return}
     r.innerHTML=resCard(p[Math.random()*p.length|0],true)},70+k*6)}
-document.addEventListener("click",e=>{const t=e.target;
+document.addEventListener("click",e=>{const t=e.target.closest?.("[data-plan-toggle],[data-plan-save],[data-plan-remove]")||e.target;
+  if(t.dataset.planToggle!=null){S.planOpenKey=S.planOpenKey===t.dataset.planToggle?null:t.dataset.planToggle;render();return}
+  if(t.dataset.planSave!=null){savePlannedBadge(t);return}
+  if(t.dataset.planRemove!=null){removePlannedBadge(t);return}
   if(t.dataset.profileMode){S.profileMode=t.dataset.profileMode;S.selectedProfileUid=null;renderProfiles()}
   if(t.dataset.comparePlayer){const uid=t.dataset.comparePlayer;S.compareProfileA=uid;if(!S.compareProfileB||S.compareProfileB===uid)S.compareProfileB=S.publicProfiles.find(p=>p.uid!==uid)?.uid||null;S.selectedProfileUid=null;S.profileMode="compare";renderProfiles()}
   if(t.dataset.openProfile){S.selectedProfileUid=t.dataset.openProfile;S.profileMode="directory";renderProfiles()}
@@ -1520,7 +1576,7 @@ loadIcons();
 const C=window.FB_CFG;
 if(C){
   const B="https://www.gstatic.com/firebasejs/10.12.2/";
-  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,getDoc,collection},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,signInAnonymously,linkWithPopup}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
+  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,getDoc,collection,deleteDoc},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,signInAnonymously,linkWithPopup}]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
   const app=initializeApp(C),db=getFirestore(app),au=getAuth(app),legacyRef=doc(db,"uhbl","state");
   const userRef=uid=>doc(db,"users",uid);
   const publicRef=uid=>doc(db,"publicProfiles",uid);
@@ -1535,8 +1591,31 @@ if(C){
   window.fbLoadUserProfile=async()=>{if(!au.currentUser)throw new Error("Not signed in.");const snap=await getDoc(userRef(au.currentUser.uid));return snap.exists()?snap.data():{}};
   window.fbSaveUserProfile=async data=>{if(!au.currentUser||!data||data.firebaseUid!==au.currentUser.uid)throw new Error("You can only save your own UHBL profile.");await setDoc(userRef(au.currentUser.uid),{...data,updatedAt:Date.now()},{merge:true})};
   window.fbSavePublicProfile=async data=>{if(!au.currentUser||!data||data.uid!==au.currentUser.uid)throw new Error("You can only publish your own player profile.");await setDoc(publicRef(au.currentUser.uid),{...data,updatedAt:Date.now()},{merge:true})};
+  const plannedRef=id=>doc(db,"plannedBadges",id);
+  const plannedDocId=(badge,uid)=>hashKey(bk(badge))+"_"+uid;
+  window.fbSavePlannedBadge=async(badge,note)=>{
+    const user=au.currentUser;
+    if(!user)throw new Error("Sign in first.");
+    const profile=window.UHBL_APP_STATE.profileData||{};
+    const linked=profile.linkedRoblox||{};
+    const displayName=user.displayName||(user.isAnonymous?"UHBL Guest":"UHBL Player");
+    const record={uid:user.uid,badgeKey:bk(badge),game:badge.game,badgeName:badge.name,displayName,robloxUsername:linked.username||null,note:String(note||"").slice(0,500),updatedAt:Date.now()};
+    await setDoc(plannedRef(plannedDocId(badge,user.uid)),record);
+  };
+  window.fbDeletePlannedBadge=async badge=>{
+    const user=au.currentUser;
+    if(!user)throw new Error("Sign in first.");
+    await deleteDoc(plannedRef(plannedDocId(badge,user.uid)));
+  };
   onSnapshot(legacyRef,s=>window.applyRemote(s.exists()?s.data().badges||{}:{}),e=>{console.error("Community state listener:",e);window.applyRemote({})});
   onSnapshot(collection(db,"publicProfiles"),snap=>{const S=window.UHBL_APP_STATE;S.publicProfiles=snap.docs.map(d=>({uid:d.id,...d.data()}));render();},e=>console.error("Public profiles listener:",e));
+  onSnapshot(collection(db,"plannedBadges"),snap=>{
+    const S=window.UHBL_APP_STATE;
+    S.plannedPlans=snap.docs.map(d=>({id:d.id,...d.data()})).filter(p=>typeof p.uid==="string"&&typeof p.badgeKey==="string");
+    S.plannedByBadge={};
+    S.plannedPlans.forEach(plan=>{(S.plannedByBadge[plan.badgeKey]||=[]).push(plan)});
+    render();
+  },error=>console.error("Planned badge listener:",error));
   onAuthStateChanged(au,async user=>{
     window.UHBL_FIREBASE_USER=user||null;
     const S=window.UHBL_APP_STATE;
