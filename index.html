@@ -729,7 +729,7 @@ window.applyRemote=d=>{
 const TL=t=>t==null?"":t===0?"0.5 STAR":"★".repeat(t)+" "+t+(t===1?" STAR":" STARS");
 // Roblox's public badge-thumbnail API. Cached images are shown immediately while
 // the cache is refreshed in the background and pending thumbnails are retried.
-const thumbnailHost="https://thumbnails.roblox.com";
+const thumbnailProxy="https://uhbl-roblox-api.jolantern368.workers.dev/roblox/badge-icons";
 const ICON_RETRY_MS=60*1000;          // Retry pending/unavailable thumbnails once a minute.
 const ICON_REFRESH_MS=24*60*60*1000; // Refresh completed thumbnail URLs daily.
 const ICON_ERROR_RETRY_MS=5*60*1000;
@@ -780,7 +780,7 @@ async function loadIcons(forceIds=[]){
     for(let i=0;i<due.length;i+=100){
       const batch=due.slice(i,i+100);
       try{
-        const url=`${thumbnailHost}/v1/badges/icons?badgeIds=${encodeURIComponent(batch.join(","))}&size=150x150&format=Png&isCircular=false`;
+        const url=`${thumbnailProxy}?badgeIds=${encodeURIComponent(batch.join(","))}`;
         const result=await jget(url,{cache:"no-store"});
         const byId=new Map((Array.isArray(result.data)?result.data:[]).map(item=>[String(item.targetId),item]));
         const checkedAt=Date.now();
